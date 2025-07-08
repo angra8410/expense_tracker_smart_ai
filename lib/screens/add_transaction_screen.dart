@@ -569,6 +569,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         );
 
         await WebStorageService.addTransaction(transaction);
+        print('✅ Debug: Transaction saved successfully - ${transaction.description} (${transaction.amount})');
 
         if (mounted) {
           final isSpanish = Localizations.localeOf(context).languageCode == 'es';

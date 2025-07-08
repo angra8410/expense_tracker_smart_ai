@@ -124,15 +124,22 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  final GlobalKey<HomeScreenState> _homeScreenKey = GlobalKey<HomeScreenState>();
 
   void _navigateToTab(int index) {
     setState(() {
       _selectedIndex = index;
     });
+    
+    // Refresh home screen when switching to it
+    if (index == 0) {
+      _homeScreenKey.currentState?.loadDashboardData();
+    }
   }
 
   List<Widget> get _screens => [
     HomeScreen(
+      key: _homeScreenKey,
       onNavigateToTab: _navigateToTab,
       currency: widget.currency,
     ),
@@ -163,6 +170,11 @@ class _MainScreenState extends State<MainScreen> {
           setState(() {
             _selectedIndex = index;
           });
+          
+          // Refresh home screen when switching to it
+          if (index == 0) {
+            _homeScreenKey.currentState?.loadDashboardData();
+          }
         },
         selectedItemColor: Colors.purple[700],
         unselectedItemColor: Colors.grey[600],

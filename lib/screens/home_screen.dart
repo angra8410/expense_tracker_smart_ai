@@ -11,10 +11,10 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.onNavigateToTab, required this.currency});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> {
   double _totalIncome = 0.0;
   double _totalExpenses = 0.0;
   int _transactionCount = 0;
@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadDashboardData();
+    loadDashboardData();
   }
 
   // Temporary localization method
@@ -62,13 +62,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _loadDashboardData() async {
+  // Public method that can be called from MainScreen
+  Future<void> loadDashboardData() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
       final transactions = await WebStorageService.getTransactions();
+      print('🔍 Debug: Loaded ${transactions.length} transactions from storage');
+      
       final realTransactions = transactions.where((t) => !t.id.startsWith('test_')).toList();
       
       double income = 0.0;
@@ -92,8 +95,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _realTransactionCount = realTransactions.length;
         _recentTransactions = sortedTransactions.take(5).toList();
       });
+      
+      print('✅ Debug: Dashboard updated - Income: $income, Expenses: $expenses, Count: ${transactions.length}');
     } catch (e) {
-      print('Error loading dashboard data: $e');
+      print('❌ Error loading dashboard data: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -130,13 +135,13 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadDashboardData,
+            onPressed: loadDashboardData,
             tooltip: _getLocalizedText('refreshData'),
           ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadDashboardData,
+        onRefresh: loadDashboardData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
