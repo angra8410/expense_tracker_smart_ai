@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/transaction.dart';
 import '../models/category.dart';
 import '../services/web_storage_service.dart';
-import '../services/app_initialization_service.dart';
-import '../services/settings_service.dart';
-import 'package:uuid/uuid.dart';
+import '../l10n/app_localizations.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final String currency;
 
-  const AddTransactionScreen({super.key, required this.currency});
+  const AddTransactionScreen({Key? key, required this.currency}) : super(key: key);
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -23,8 +22,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   TransactionType _selectedType = TransactionType.expense;
   String? _selectedCategoryId;
   DateTime _selectedDate = DateTime.now();
-  bool _isLoading = false;
-  bool _categoriesLoaded = false;
+  bool _isSaving = false;
+  
   List<Category> _categories = [];
 
   @override
@@ -33,360 +32,226 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _loadCategories();
   }
 
-  // Temporary localization method
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
   String _getLocalizedText(String key) {
-    final isSpanish = Localizations.localeOf(context).languageCode == 'es';
+    final localizations = AppLocalizations.of(context);
+    if (localizations == null) {
+      // Fallback values
+      switch (key) {
+        case 'addExpense': return 'Add Expense';
+        case 'addIncome': return 'Add Income';
+        case 'amount': return 'Amount';
+        case 'description': return 'Description';
+        case 'category': return 'Category';
+        case 'date': return 'Date';
+        case 'save': return 'Save';
+        case 'cancel': return 'Cancel';
+        default: return key;
+      }
+    }
     
     switch (key) {
-      case 'newTransaction': return isSpanish ? 'Nueva Transacción' : 'New Transaction';
-      case 'addIncomeExpense': return isSpanish ? 'Agregar ingreso o gasto para rastrear con IA Inteligente' : 'Add income or expense to track with Smart AI';
-      case 'transactionType': return isSpanish ? 'Tipo de Transacción' : 'Transaction Type';
-      case 'expense': return isSpanish ? 'Gasto' : 'Expense';
-      case 'income': return isSpanish ? 'Ingreso' : 'Income';
-      case 'amount': return isSpanish ? 'Cantidad' : 'Amount';
-      case 'description': return isSpanish ? 'Descripción' : 'Description';
-      case 'whatWasThisFor': return isSpanish ? '¿Para qué fue esta transacción?' : 'What was this transaction for?';
-      case 'category': return isSpanish ? 'Categoría' : 'Category';
-      case 'selectCategory': return isSpanish ? 'Selecciona una categoría' : 'Select a category';
-      case 'date': return isSpanish ? 'Fecha' : 'Date';
-      case 'pleaseEnterAmount': return isSpanish ? 'Por favor ingresa una cantidad' : 'Please enter an amount';
-      case 'pleaseEnterValidAmount': return isSpanish ? 'Por favor ingresa una cantidad válida' : 'Please enter a valid amount';
-      case 'pleaseEnterDescription': return isSpanish ? 'Por favor ingresa una descripción' : 'Please enter a description';
-      case 'pleaseSelectCategory': return isSpanish ? 'Por favor selecciona una categoría' : 'Please select a category';
-      case 'saving': return isSpanish ? 'Guardando...' : 'Saving...';
-      case 'addExpense': return isSpanish ? 'Agregar Gasto' : 'Add Expense';
-      case 'addIncome': return isSpanish ? 'Agregar Ingreso' : 'Add Income';
-      case 'loadingCategories': return isSpanish ? 'Cargando categorías...' : 'Loading categories...';
-      case 'readyTransactions': return isSpanish ? '¡Listo! {count} categorías cargadas' : 'Ready! {count} categories loaded';
+      case 'addExpense': return 'Add Expense'; // Fallback since it's missing from localizations
+      case 'addIncome': return 'Add Income'; // Fallback since it's missing from localizations
+      case 'amount': return localizations.amount;
+      case 'description': return localizations.description;
+      case 'category': return localizations.category;
+      case 'date': return localizations.date;
+      case 'save': return localizations.save;
+      case 'cancel': return localizations.cancel;
       default: return key;
     }
   }
 
   Future<void> _loadCategories() async {
     try {
-      final categories = await AppInitializationService.getCategories();
+      final categories = await WebStorageService.getCategories();
       setState(() {
         _categories = categories;
-        _categoriesLoaded = true;
       });
     } catch (e) {
       print('Error loading categories: $e');
-      setState(() {
-        _categoriesLoaded = true;
-      });
     }
-  }
-
-  String _formatAmount(double amount) {
-    return SettingsService.formatCurrency(amount, widget.currency);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: _selectedType == TransactionType.expense
-                      ? [Colors.red[600]!, Colors.red[400]!]
-                      : [Colors.green[600]!, Colors.green[400]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: (_selectedType == TransactionType.expense ? Colors.red : Colors.green).withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: AppBar(
+        title: Text(_selectedType == TransactionType.expense 
+            ? _getLocalizedText('addExpense')
+            : _getLocalizedText('addIncome')),
+        backgroundColor: _selectedType == TransactionType.expense 
+            ? Colors.red[600] 
+            : Colors.green[600],
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          // Transaction Type Toggle
+          Container(
+            width: double.infinity,
+            color: _selectedType == TransactionType.expense 
+                ? Colors.red[600] 
+                : Colors.green[600],
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        _selectedType == TransactionType.expense 
-                            ? Icons.remove_circle 
-                            : Icons.add_circle,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        _getLocalizedText('newTransaction'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedType = TransactionType.expense;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _selectedType == TransactionType.expense 
+                            ? Colors.white 
+                            : Colors.transparent,
+                        foregroundColor: _selectedType == TransactionType.expense 
+                            ? Colors.red[600] 
+                            : Colors.white,
+                        elevation: _selectedType == TransactionType.expense ? 2 : 0,
+                        side: BorderSide(color: Colors.white),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _getLocalizedText('addIncomeExpense'),
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 16,
+                      child: Text(_getLocalizedText('addExpense')),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Colombia 🇨🇴 | ${widget.currency} | Usuario: angra8410',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 12,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedType = TransactionType.income;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _selectedType == TransactionType.income 
+                            ? Colors.white 
+                            : Colors.transparent,
+                        foregroundColor: _selectedType == TransactionType.income 
+                            ? Colors.green[600] 
+                            : Colors.white,
+                        elevation: _selectedType == TransactionType.income ? 2 : 0,
+                        side: BorderSide(color: Colors.white),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(_getLocalizedText('addIncome')),
                     ),
                   ),
                 ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 24),
-
-            // Form
-            Form(
+          // Form
+          Expanded(
+            child: Form(
               key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Transaction Type Section
-                  Text(
-                    _getLocalizedText('transactionType'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedType = TransactionType.expense;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: _selectedType == TransactionType.expense
-                                  ? Colors.red[100]
-                                  : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _selectedType == TransactionType.expense
-                                    ? Colors.red[300]!
-                                    : Colors.grey[300]!,
-                                width: _selectedType == TransactionType.expense ? 2 : 1,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.remove_circle,
-                                  color: _selectedType == TransactionType.expense
-                                      ? Colors.red[600]
-                                      : Colors.grey[600],
-                                  size: 32,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  _getLocalizedText('expense'),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: _selectedType == TransactionType.expense
-                                        ? Colors.red[600]
-                                        : Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedType = TransactionType.income;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: _selectedType == TransactionType.income
-                                  ? Colors.green[100]
-                                  : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _selectedType == TransactionType.income
-                                    ? Colors.green[300]!
-                                    : Colors.grey[300]!,
-                                width: _selectedType == TransactionType.income ? 2 : 1,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.add_circle,
-                                  color: _selectedType == TransactionType.income
-                                      ? Colors.green[600]
-                                      : Colors.grey[600],
-                                  size: 32,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  _getLocalizedText('income'),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: _selectedType == TransactionType.income
-                                        ? Colors.green[600]
-                                        : Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Amount Field
-                  Text(
-                    '${_getLocalizedText('amount')} (${widget.currency})',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: widget.currency == 'COP' ? '1.500' : '1.50',
-                      prefixText: SettingsService.getCurrencySymbol(widget.currency) + ' ',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: _selectedType == TransactionType.expense
-                              ? Colors.red[600]!
-                              : Colors.green[600]!,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return _getLocalizedText('pleaseEnterAmount');
-                      }
-                      if (double.tryParse(value.replaceAll(',', '.')) == null) {
-                        return _getLocalizedText('pleaseEnterValidAmount');
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Description Field
-                  Text(
-                    _getLocalizedText('description'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _descriptionController,
-                    decoration: InputDecoration(
-                      hintText: _getLocalizedText('whatWasThisFor'),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: _selectedType == TransactionType.expense
-                              ? Colors.red[600]!
-                              : Colors.green[600]!,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return _getLocalizedText('pleaseEnterDescription');
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Category Field
-                  Text(
-                    _getLocalizedText('category'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (!_categoriesLoaded) ...[
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Row(
-                        children: [
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(_getLocalizedText('loadingCategories')),
-                        ],
-                      ),
-                    ),
-                  ] else ...[
-                    DropdownButtonFormField<String>(
-                      value: _selectedCategoryId,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Amount Field
+                    TextFormField(
+                      controller: _amountController,
                       decoration: InputDecoration(
-                        hintText: _getLocalizedText('selectCategory'),
+                        labelText: '${_getLocalizedText('amount')} (${widget.currency})',
+                        prefixIcon: Icon(
+                          _selectedType == TransactionType.expense 
+                              ? Icons.remove_circle_outline 
+                              : Icons.add_circle_outline,
+                          color: _selectedType == TransactionType.expense 
+                              ? Colors.red[600] 
+                              : Colors.green[600],
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: _selectedType == TransactionType.expense
-                                ? Colors.red[600]!
+                            color: _selectedType == TransactionType.expense 
+                                ? Colors.red[600]! 
+                                : Colors.green[600]!,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter an amount';
+                        }
+                        final amount = double.tryParse(value.replaceAll(',', '.'));
+                        if (amount == null || amount <= 0) {
+                          return 'Please enter a valid amount';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Description Field
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: InputDecoration(
+                        labelText: _getLocalizedText('description'),
+                        prefixIcon: Icon(Icons.description, color: Colors.grey[600]),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: _selectedType == TransactionType.expense 
+                                ? Colors.red[600]! 
+                                : Colors.green[600]!,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      maxLines: 2,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a description';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Category Dropdown
+                    DropdownButtonFormField<String>(
+                      value: _selectedCategoryId,
+                      decoration: InputDecoration(
+                        labelText: _getLocalizedText('category'),
+                        prefixIcon: Icon(Icons.category, color: Colors.grey[600]),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: _selectedType == TransactionType.expense 
+                                ? Colors.red[600]! 
                                 : Colors.green[600]!,
                             width: 2,
                           ),
@@ -397,11 +262,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           value: category.id,
                           child: Row(
                             children: [
-                              Icon(
-                                category.icon,
-                                color: category.color,
-                                size: 20,
-                              ),
+                              Icon(category.icon, size: 20),
                               const SizedBox(width: 8),
                               Text(category.name),
                             ],
@@ -415,203 +276,207 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return _getLocalizedText('pleaseSelectCategory');
+                          return 'Please select a category';
                         }
                         return null;
                       },
                     ),
-                  ],
+                    const SizedBox(height: 16),
 
-                  const SizedBox(height: 24),
-
-                  // Date Field
-                  Text(
-                    _getLocalizedText('date'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () => _selectDate(context),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today, color: Colors.grey[600]),
-                          const SizedBox(width: 8),
-                          Text(
-                            _selectedDate.toString().substring(0, 10),
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Submit Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isLoading ? null : _saveTransaction,
-                      icon: _isLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Icon(_selectedType == TransactionType.expense
-                              ? Icons.remove_circle
-                              : Icons.add_circle),
-                      label: Text(_isLoading
-                          ? _getLocalizedText('saving')
-                          : _selectedType == TransactionType.expense
-                              ? _getLocalizedText('addExpense')
-                              : _getLocalizedText('addIncome')),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _selectedType == TransactionType.expense
-                            ? Colors.red[600]
-                            : Colors.green[600],
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
+                    // Date Picker
+                    InkWell(
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: _selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now().add(Duration(days: 365)),
+                        );
+                        if (date != null) {
+                          setState(() {
+                            _selectedDate = date;
+                          });
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
                           borderRadius: BorderRadius.circular(12),
+                          color: Colors.grey.shade50,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_today, color: Colors.grey.shade600),
+                            const SizedBox(width: 12),
+                            Text(
+                              '${_getLocalizedText('date')}: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                            const Spacer(),
+                            Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Status Card
-                  if (_categoriesLoaded) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.green[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green[200]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.green[600]),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _getLocalizedText('readyTransactions').replaceAll('{count}', _categories.length.toString()),
-                              style: TextStyle(color: Colors.green[700]),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    const SizedBox(height: 32),
                   ],
-                ],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Save Button
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.3),
+                  spreadRadius: 1,
+                  blurRadius: 5,
+                  offset: Offset(0, -2),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: _isSaving ? null : _saveTransaction,
+              child: _isSaving
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Text('Saving...'),
+                      ],
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_selectedType == TransactionType.expense ? Icons.remove_circle : Icons.add_circle),
+                        SizedBox(width: 8),
+                        Text(
+                          _selectedType == TransactionType.expense
+                              ? _getLocalizedText('addExpense')
+                              : _getLocalizedText('addIncome'),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _selectedType == TransactionType.expense ? Colors.red[600] : Colors.green[600],
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
-
   Future<void> _saveTransaction() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
+    print('💾 Save transaction button pressed');
+    
+    if (!_formKey.currentState!.validate()) {
+      print('❌ Form validation failed');
+      return;
+    }
 
-      try {
-        final amount = double.parse(_amountController.text.replaceAll(',', '.'));
-        final description = _descriptionController.text;
+    setState(() {
+      _isSaving = true;
+    });
 
-        final transaction = Transaction(
-          id: const Uuid().v4(),
-          amount: amount,
-          description: description,
-          categoryId: _selectedCategoryId!,
-          date: _selectedDate,
-          type: _selectedType,
-          accountId: 'personal',
+    try {
+      print('📝 Creating transaction object...');
+      
+      // Parse amount
+      final amountText = _amountController.text.replaceAll(',', '.');
+      final amount = double.parse(amountText);
+      print('💰 Amount parsed: $amount');
+
+      // Create transaction
+      final transaction = Transaction(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        amount: amount,
+        description: _descriptionController.text.trim(),
+        categoryId: _selectedCategoryId!,
+        type: _selectedType,
+        date: _selectedDate,
+        accountId: 'personal',
+        createdAt: DateTime.now(),
+      );
+      print('✅ Transaction object created: ${transaction.id}');
+
+      // Save to storage
+      print('💾 Saving to WebStorageService...');
+      await WebStorageService.addTransaction(transaction);
+      print('✅ Transaction saved to storage');
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('✅ Transaction saved successfully!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
         );
 
-        await WebStorageService.addTransaction(transaction);
+        // Clear form
+        _amountController.clear();
+        _descriptionController.clear();
+        setState(() {
+          _selectedCategoryId = null;
+          _selectedDate = DateTime.now();
+        });
+        print('🧹 Form cleared');
+      }
 
-        if (mounted) {
-          final isSpanish = Localizations.localeOf(context).languageCode == 'es';
-          final successMessage = _selectedType == TransactionType.expense
-              ? (isSpanish ? 'Gasto de ${_formatAmount(amount)} agregado!' : 'Expense of ${_formatAmount(amount)} added!')
-              : (isSpanish ? 'Ingreso de ${_formatAmount(amount)} agregado!' : 'Income of ${_formatAmount(amount)} added!');
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ $successMessage'),
-              backgroundColor: _selectedType == TransactionType.expense 
-                  ? Colors.red[600] 
-                  : Colors.green[600],
+    } catch (e, stackTrace) {
+      print('❌ Error saving transaction: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('❌ Error saving transaction: $e')),
+              ],
             ),
-          );
-
-          // Clear form
-          _amountController.clear();
-          _descriptionController.clear();
-          setState(() {
-            _selectedCategoryId = null;
-            _selectedDate = DateTime.now();
-          });
-          
-          // Show success message and stay on the form
-          // The home screen will refresh when user navigates back
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('❌ Error: $e'),
-              backgroundColor: Colors.red[600],
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
   }
 }

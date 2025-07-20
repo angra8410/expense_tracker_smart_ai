@@ -1,99 +1,88 @@
 {
   "@@locale": "en",
+  
   "appTitle": "Smart AI Expense Tracker",
+  "dashboard": "Dashboard",
+  "transactions": "Transactions",
+  "categories": "Categories",
+  "settings": "Settings",
+  "analytics": "Analytics",
+  
   "home": "Home",
   "add": "Add",
-  "analytics": "Analytics",
   "aiInsights": "AI Insights",
   "testing": "Testing",
-  "settings": "Settings",
   
-  "welcomeBack": "👋 Welcome back, {username}!",
-  "@welcomeBack": {
-    "placeholders": {
-      "username": {
-        "type": "String"
-      }
-    }
-  },
-  
-  "smartFinancialIntelligence": "Smart Financial Intelligence at your fingertips",
-  "totalIncome": "Total Income",
-  "totalExpenses": "Total Expenses",
-  "netBalance": "Net Balance",
-  "transactions": "Transactions",
-  "realTransactions": "real",
-  
-  "quickActions": "⚡ Quick Actions",
   "addTransaction": "Add Transaction",
-  "addTransactionDesc": "Record new income or expense",
-  "viewAnalytics": "View Analytics",
-  "viewAnalyticsDesc": "See spending trends and insights",
-  "aiInsightsDesc": "Smart financial intelligence",
-  "testLab": "Test Lab",
-  "testLabDesc": "Generate test data for AI",
+  "editTransaction": "Edit Transaction",
+  "deleteTransaction": "Delete Transaction",
+  "transactionAdded": "Transaction added successfully!",
+  "transactionUpdated": "Transaction updated successfully!",
+  "transactionDeleted": "Transaction deleted successfully!",
+  "confirmDeleteTransaction": "Are you sure you want to delete this transaction?",
+  "confirmDeleteTransactionMessage": "This action cannot be undone.",
   
-  "recentTransactions": "📊 Recent Transactions",
-  "viewAll": "View All",
-  "noTransactionsYet": "No transactions yet",
-  "addFirstTransaction": "Add your first transaction or generate test data",
-  "testData": "Test Data",
-  
-  "smartAIIntelligence": "🧠 Smart AI Intelligence",
-  "getIntelligentInsights": "Get intelligent insights into your spending patterns",
-  "weekendAnalysis": "• Weekend vs weekday analysis",
-  "categoryTrends": "• Category spending trends",
-  "recurringDetection": "• Recurring transaction detection",
-  "anomalyAlerts": "• Anomaly alerts and predictions",
-  "exploreAIInsights": "Explore AI Insights",
-  
-  "newTransaction": "New Transaction",
-  "addIncomeExpense": "Add income or expense to track with Smart AI",
-  "transactionType": "Transaction Type",
-  "expense": "Expense",
-  "income": "Income",
   "amount": "Amount",
   "description": "Description",
-  "whatWasThisFor": "What was this transaction for?",
   "category": "Category",
-  "selectCategory": "Select a category",
   "date": "Date",
+  "type": "Type",
+  "expense": "Expense",
+  "income": "Income",
+  "submit": "Submit",
+  "save": "Save",
+  "selectCategory": "Select Category",
+  "selectDate": "Select Date",
+  "enterAmount": "Enter amount",
+  "enterDescription": "Enter description",
   "pleaseEnterAmount": "Please enter an amount",
-  "pleaseEnterValidAmount": "Please enter a valid amount",
   "pleaseEnterDescription": "Please enter a description",
   "pleaseSelectCategory": "Please select a category",
-  "saving": "Saving...",
-  "addExpense": "Add Expense",
-  "addIncome": "Add Income",
+  "invalidAmount": "Please enter a valid amount",
+  "pleaseEnterValidAmount": "Please enter a valid amount",
   
-  "expenseAdded": "Expense of {amount} added!",
-  "@expenseAdded": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
+  "totalIncome": "Total Income",
+  "totalExpenses": "Total Expenses",
+  "balance": "Balance",
+  "netBalance": "Net Balance",
+  "noTransactions": "No transactions yet",
+  "noTransactionsYet": "No transactions yet",
+  "addFirstTransaction": "Add your first transaction to get started",
+  "recentTransactions": "Recent Transactions",
+  "viewAll": "View All",
   
-  "incomeAdded": "Income of {amount} added!",
-  "@incomeAdded": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
+  "addCategory": "Add Category",
+  "editCategory": "Edit Category",
+  "deleteCategory": "Delete Category",
+  "categoryAdded": "Category added successfully!",
+  "categoryUpdated": "Category updated successfully!",
+  "categoryDeleted": "Category deleted successfully!",
+  "confirmDeleteCategory": "Are you sure you want to delete this category?",
+  "confirmDeleteCategoryMessage": "This action cannot be undone. All transactions in this category will be moved to 'Other'.",
+  "categoryName": "Category Name",
+  "categoryIcon": "Category Icon",
+  "categoryColor": "Category Color",
+  "pleaseEnterCategoryName": "Please enter a category name",
+  "noCategories": "No categories yet",
+  "addFirstCategory": "Add your first category to organize your transactions",
   
+  "darkMode": "Dark Mode",
+  "lightMode": "Light Mode",
+  "systemMode": "System",
   "language": "Language",
   "currency": "Currency",
-  "theme": "Theme",
-  "light": "Light",
-  "dark": "Dark",
-  "spanish": "Spanish",
-  "english": "English",
-  "usDollar": "US Dollar",
-  "colombianPeso": "Colombian Peso",
+  "notifications": "Notifications",
+  "exportData": "Export Data",
+  "importData": "Import Data",
+  "clearAllData": "Clear All Data",
+  "confirmClearData": "Are you sure you want to clear all data?",
+  "confirmClearDataMessage": "This action cannot be undone. All your transactions, categories, and settings will be permanently deleted.",
+  "dataCleared": "All data cleared successfully!",
+  "dataExported": "Data exported successfully!",
+  "dataImported": "Data imported successfully!",
   
+  "thisWeek": "This Week",
+  "lastWeek": "Last Week",
   "appearance": "Appearance",
   "localization": "Localization",
   "chooseLanguage": "Choose your language",
@@ -116,5 +105,180 @@
   "gas": "Gas", 
   "salary": "Salary",
   "grocery": "Grocery",
-  "movie": "Movie"
+  "movie": "Movie",
+  
+  "thisMonth": "This Month",
+  "lastMonth": "Last Month",
+  "thisYear": "This Year",
+  "allTime": "All Time",
+  "spendingOverview": "Spending Overview",
+  "categoryBreakdown": "Category Breakdown",
+  
+  "budgets": "Budgets",
+  "budgetManagement": "Budget Management",
+  "createBudget": "Create Budget",
+  "editBudget": "Edit Budget",
+  "updateBudget": "Update Budget",
+  "deleteBudget": "Delete Budget",
+  "budgetName": "Budget Name",
+  "budgetPeriod": "Budget Period",
+  "weekly": "Weekly",
+  "monthly": "Monthly",
+  "yearly": "Yearly",
+  "enableRollover": "Enable Rollover",
+  "rolloverDescription": "Unused budget carries over to next period",
+  "smartBudgetRecommendations": "Smart Budget Recommendations",
+  "budgetOverview": "Budget Overview",
+  "totalBudget": "Total Budget",
+  "totalSpent": "Total Spent",
+  "remaining": "Remaining",
+  "overallProgress": "Overall Progress",
+  "activeBudgets": "Active Budgets",
+  "noBudgetsYet": "No budgets yet",
+  "createFirstBudget": "Create your first budget to start tracking your spending goals",
+  "spent": "spent",
+  "budgeted": "budgeted",
+  "used": "used",
+  "suggested": "suggested",
+  "pleaseEnterBudgetName": "Please enter a budget name",
+  "cancel": "Cancel",
+  "create": "Create",
+  "update": "Update",
+  "delete": "Delete",
+  "edit": "Edit",
+  "budgetCreated": "Budget created successfully!",
+  "budgetUpdated": "Budget updated successfully!",
+  "budgetDeleted": "Budget deleted successfully!",
+  "confirmDeleteBudget": "Are you sure you want to delete this budget?",
+  "confirmDeleteBudgetMessage": "This action cannot be undone. All budget data will be permanently removed.",
+  "onTrack": "On Track",
+  "warning": "Warning",
+  "exceeded": "Exceeded",
+  "rolloverEnabled": "Rollover Enabled",
+  "rolloverDisabled": "Rollover Disabled",
+  "budgetRolledOver": "Budget rolled over with {amount} remaining",
+  "@budgetRolledOver": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "aiAnalysis": "AI Analysis",
+  "aiAnalysisDescription": "Intelligent insights and spending patterns",
+  "aiAnalysisScore": "AI Analysis Score",
+  "errorLoadingData": "Error loading data",
+  "noCategoriesFound": "No categories found",
+  
+  "debugControls": "Debug Controls",
+  "testCompleted": "Test completed",
+  "allDataCleared": "All data cleared",
+
+  "categoryFood": "Food & Dining",
+  "categoryTransport": "Transportation",
+  "categoryShopping": "Shopping",
+  "categoryEntertainment": "Entertainment",
+  "categoryBills": "Bills & Utilities",
+  "categoryHealth": "Health & Fitness",
+  "categorySalary": "Salary",
+  "categoryInvestment": "Investments",
+  "categoryEducation": "Education",
+  "categoryGift": "Gifts & Donations",
+  "categoryOther": "Other",
+  
+  "smartCategoryPrediction": "Smart Category Prediction",
+  "anomalyDetection": "Anomaly Detection",
+  "cashflowForecast": "Cashflow Forecast",
+  "personalizedAdvice": "Personalized Advice",
+  "mlInsights": "ML Insights",
+  "unusualSpending": "Unusual Spending",
+  "spendingAnomaly": "Spending Anomaly Detected",
+  "forecastBalance": "Forecasted Balance",
+  "predictedIncome": "Predicted Income",
+  "predictedExpenses": "Predicted Expenses",
+  "confidenceLevel": "Confidence: {confidence}%",
+  "@confidenceLevel": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "potentialSavings": "Potential Savings: {amount}",
+  "@potentialSavings": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "mlAccuracy": "ML Accuracy: {accuracy}%",
+  "@mlAccuracy": {
+    "placeholders": {
+      "accuracy": {
+        "type": "String"
+      }
+    }
+  },
+  "anomalyScore": "Anomaly Score: {score}",
+  "@anomalyScore": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "expectedRange": "Expected Range: {min} - {max}",
+  "@expectedRange": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "forecastDays": "Forecast for {days} days",
+  "@forecastDays": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "adviceDifficulty": "Difficulty: {difficulty}",
+  "@adviceDifficulty": {
+    "placeholders": {
+      "difficulty": {
+        "type": "String"
+      }
+    }
+  },
+  "adviceTimeframe": "Timeframe: {timeframe}",
+  "@adviceTimeframe": {
+    "placeholders": {
+      "timeframe": {
+        "type": "String"
+      }
+    }
+  },
+  "mlFeatures": "🤖 ML Features",
+  "smartCategoryAssignment": "Smart Category Auto-Assignment",
+  "smartCategoryDesc": "ML learns your patterns and suggests categories",
+  "anomalyAlertsDesc": "Get alerts for unusual spending patterns",
+  "cashflowForecastDesc": "Predict future account balances",
+  "personalizedAdviceDesc": "Custom recommendations based on your behavior",
+  "enableMLFeatures": "Enable ML Features",
+  "mlAnalysisRunning": "Running ML Analysis...",
+  "mlAnalysisComplete": "ML Analysis Complete",
+  "insufficientDataForML": "Need more transactions for ML analysis",
+  "viewMLInsights": "View ML Insights",
+  "anomalyAlerts": "Anomaly Alerts",
+  "noAnomaliesDetected": "No anomalies detected",
+  "forecastAccuracy": "Forecast Accuracy",
+  "highConfidence": "High Confidence",
+  "mediumConfidence": "Medium Confidence",
+  "lowConfidence": "Low Confidence"
 }

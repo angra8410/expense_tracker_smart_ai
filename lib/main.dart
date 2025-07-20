@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'screens/home_screen.dart';
 import 'screens/add_transaction_screen.dart';
 import 'screens/analytics_screen.dart';
+import 'screens/budget_screen.dart';
 import 'screens/intelligence_screen.dart';
 import 'screens/testing_screen.dart';
 import 'services/app_initialization_service.dart';
@@ -273,8 +274,10 @@ class _MainScreenState extends State<MainScreen> {
       case 2:
         return '📊 Analytics';
       case 3:
-        return '🧠 AI Insights';
+        return isSpanish ? '💰 Presupuestos' : '💰 Budgets';
       case 4:
+        return '🧠 AI Insights';
+      case 5:
         return '🧪 Test Lab';
       default:
         return '💰 Smart Expense Tracker';
@@ -290,8 +293,10 @@ class _MainScreenState extends State<MainScreen> {
       case 2:
         return Colors.orange[700]!;
       case 3:
-        return Colors.indigo[700]!;
+        return Colors.green[700]!;
       case 4:
+        return Colors.indigo[700]!;
+      case 5:
         return Colors.purple[700]!;
       default:
         return Colors.purple[700]!;
@@ -305,7 +310,8 @@ class _MainScreenState extends State<MainScreen> {
     ),
     AddTransactionScreen(currency: widget.currency),
     AnalyticsScreen(currency: widget.currency),
-    const IntelligenceScreen(),
+    BudgetScreen(currency: widget.currency),
+    IntelligenceScreen(), // Remove 'const' here
     const TestingScreen(),
   ];
 
@@ -331,6 +337,16 @@ class _MainScreenState extends State<MainScreen> {
           setState(() {
             _selectedIndex = index;
           });
+          
+          // Refresh budget screen when navigating to it
+          if (index == 3) { // Budget screen index
+            // Trigger refresh after a short delay to ensure the screen is visible
+            Future.delayed(const Duration(milliseconds: 100), () {
+              final budgetScreen = _screens[3] as BudgetScreen;
+              // We need to access the state to call refresh method
+              // This requires exposing a refresh method in BudgetScreen
+            });
+          }
         },
         selectedItemColor: Colors.purple[700],
         unselectedItemColor: Colors.grey[600],
@@ -346,6 +362,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: const Icon(Icons.analytics),
             label: l10n.analytics,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.account_balance_wallet),
+            label: l10n.budgets,
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.psychology),
