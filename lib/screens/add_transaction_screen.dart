@@ -3,7 +3,14 @@ import 'package:flutter/services.dart';
 import '../models/transaction.dart';
 import '../models/category.dart';
 import '../services/web_storage_service.dart';
+<<<<<<< HEAD
 import '../l10n/app_localizations.dart';
+=======
+import '../services/app_initialization_service.dart';
+import '../services/settings_service.dart';
+import '../services/transactions_service.dart';
+import 'package:uuid/uuid.dart';
+>>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
 
 class AddTransactionScreen extends StatefulWidget {
   final String currency;
@@ -161,6 +168,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           Expanded(
             child: Form(
               key: _formKey,
+<<<<<<< HEAD
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -169,6 +177,227 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     // Amount Field
                     TextFormField(
                       controller: _amountController,
+=======
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Transaction Type Section
+                  Text(
+                    _getLocalizedText('transactionType'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedType = TransactionType.expense;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: _selectedType == TransactionType.expense
+                                  ? Colors.red[100]
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _selectedType == TransactionType.expense
+                                    ? Colors.red[300]!
+                                    : Colors.grey[300]!,
+                                width: _selectedType == TransactionType.expense ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.remove_circle,
+                                  color: _selectedType == TransactionType.expense
+                                      ? Colors.red[600]
+                                      : Colors.grey[600],
+                                  size: 32,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _getLocalizedText('expense'),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: _selectedType == TransactionType.expense
+                                        ? Colors.red[600]
+                                        : Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedType = TransactionType.income;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: _selectedType == TransactionType.income
+                                  ? Colors.green[100]
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _selectedType == TransactionType.income
+                                    ? Colors.green[300]!
+                                    : Colors.grey[300]!,
+                                width: _selectedType == TransactionType.income ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.add_circle,
+                                  color: _selectedType == TransactionType.income
+                                      ? Colors.green[600]
+                                      : Colors.grey[600],
+                                  size: 32,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _getLocalizedText('income'),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: _selectedType == TransactionType.income
+                                        ? Colors.green[600]
+                                        : Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Amount Field
+                  Text(
+                    '${_getLocalizedText('amount')} (${widget.currency})',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: widget.currency == 'COP' ? '1.500' : '1.50',
+                      prefixText: '${SettingsService.getCurrencySymbol(widget.currency)} ',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: _selectedType == TransactionType.expense
+                              ? Colors.red[600]!
+                              : Colors.green[600]!,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return _getLocalizedText('pleaseEnterAmount');
+                      }
+                      if (double.tryParse(value.replaceAll(',', '.')) == null) {
+                        return _getLocalizedText('pleaseEnterValidAmount');
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Description Field
+                  Text(
+                    _getLocalizedText('description'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _descriptionController,
+                    decoration: InputDecoration(
+                      hintText: _getLocalizedText('whatWasThisFor'),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: _selectedType == TransactionType.expense
+                              ? Colors.red[600]!
+                              : Colors.green[600]!,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return _getLocalizedText('pleaseEnterDescription');
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Category Field
+                  Text(
+                    _getLocalizedText('category'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (!_categoriesLoaded) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(_getLocalizedText('loadingCategories')),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    DropdownButtonFormField<String>(
+                      value: _selectedCategoryId,
+>>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
                       decoration: InputDecoration(
                         labelText: '${_getLocalizedText('amount')} (${widget.currency})',
                         prefixIcon: Icon(
@@ -442,6 +671,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ),
         );
 
+<<<<<<< HEAD
         // Clear form
         _amountController.clear();
         _descriptionController.clear();
@@ -451,6 +681,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         });
         print('🧹 Form cleared');
       }
+=======
+        // Save transaction to both storage services for redundancy and persistence
+        await WebStorageService.addTransaction(transaction);
+        await TransactionsService.addTransaction(transaction);
+>>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
 
     } catch (e, stackTrace) {
       print('❌ Error saving transaction: $e');

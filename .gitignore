@@ -63,22 +63,6 @@ Desktop.ini
 
 # Node modules (if any)
 node_modules/
-=======
-# See https://www.dartlang.org/guides/libraries/private-files
-
-# Files and directories created by pub
-=======
-# Flutter/Dart/Pub related
->>>>>>> origin/main
-.dart_tool/
-.packages
-.pub-cache/
-build/
-# If you're building an application, you may want to check-in your pubspec.lock
-pubspec.lock
-
-# Directory created by dartdoc
-doc/api/
 
 # Environment variables
 .env*
@@ -118,10 +102,3 @@ generated_plugin_registrant.dart
 *.js_
 *.js.deps
 *.js.map
-<<<<<<< HEAD
-
-.flutter-plugins
-.flutter-plugins-dependencies
->>>>>>> 567ac9e049ec0ddc904e706698c77e7aea1fcf41
-=======
->>>>>>> origin/main

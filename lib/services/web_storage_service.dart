@@ -1,31 +1,27 @@
 import 'dart:convert';
+<<<<<<< HEAD
 import 'dart:html' as html;
+=======
+import 'package:flutter/foundation.dart';
+>>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/category.dart';
-import '../models/transaction.dart';
+import 'web_storage_base.dart';
 
-/// Web-compatible storage service using SharedPreferences
 class WebStorageService {
-  static SharedPreferences? _prefs;
-  
-  // Storage keys
-  static const String _categoriesKey = 'categories';
-  static const String _transactionsKey = 'transactions';
-  static const String _budgetsKey = 'budgets';
-  static const String _firstRunKey = 'first_run';
+  static WebStorageService? _instance;
+  late SharedPreferences _prefs;
+  static BuildContext? _context;
+
+  WebStorageService._();
 
   static Future<void> initialize() async {
-    _prefs = await SharedPreferences.getInstance();
-    print('✅ Web storage initialized');
-  }
-
-  static SharedPreferences get prefs {
-    if (_prefs == null) {
-      throw Exception('WebStorageService not initialized. Call initialize() first.');
+    if (_instance == null) {
+      _instance = WebStorageService._();
+      await _instance!._init();
     }
-    return _prefs!;
   }
 
+<<<<<<< HEAD
   // Generic Data Storage Methods
   static Future<String?> getString(String key) async {
     return _prefs?.getString(key);
@@ -53,28 +49,48 @@ class WebStorageService {
     
     final List<dynamic> categoriesList = json.decode(categoriesJson);
     return categoriesList.map((json) => Category.fromJson(json)).toList();
+=======
+  static void setContext(BuildContext context) {
+    _context = context;
+>>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
   }
 
-  static Future<void> saveCategories(List<Category> categories) async {
-    final categoriesJson = json.encode(categories.map((c) => c.toJson()).toList());
-    await _prefs?.setString(_categoriesKey, categoriesJson);
+  static Future<WebStorageService> getInstance() async {
+    if (_instance == null) {
+      await initialize();
+    }
+    return _instance!;
   }
 
-  static Future<void> addCategory(Category category) async {
-    final categories = await getCategories();
-    categories.add(category);
-    await saveCategories(categories);
+  Future<void> _init() async {
+    _prefs = await SharedPreferences.getInstance();
+    if (kIsWeb) {
+      await _restoreFromLocalStorageIfNeeded();
+    }
   }
 
-  // Transactions Management
-  static Future<List<Transaction>> getTransactions() async {
-    final transactionsJson = _prefs?.getString(_transactionsKey);
-    if (transactionsJson == null) return [];
-    
-    final List<dynamic> transactionsList = json.decode(transactionsJson);
-    return transactionsList.map((json) => Transaction.fromJson(json)).toList();
+  Future<void> setValue(String key, dynamic value) async {
+    if (value is String) {
+      await _prefs.setString(key, value);
+    } else if (value is bool) {
+      await _prefs.setBool(key, value);
+    } else if (value is int) {
+      await _prefs.setInt(key, value);
+    } else if (value is double) {
+      await _prefs.setDouble(key, value);
+    } else if (value is List<String>) {
+      await _prefs.setStringList(key, value);
+    } else {
+      final jsonStr = jsonEncode(value);
+      await _prefs.setString(key, jsonStr);
+    }
+
+    if (kIsWeb) {
+      await _backupAllDataToLocalStorage();
+    }
   }
 
+<<<<<<< HEAD
   static Future<void> saveTransactions(List<Transaction> transactions) async {
     final transactionsJson = json.encode(transactions.map((t) => t.toJson()).toList());
     await _prefs?.setString(_transactionsKey, transactionsJson);
@@ -96,50 +112,53 @@ class WebStorageService {
     final transactions = await getTransactions();
     transactions.addAll(newTransactions);
     await saveTransactions(transactions);
+=======
+  Future<void> _backupAllDataToLocalStorage() async {
+    if (kIsWeb) {
+      final allData = _prefs.getKeys().map((key) {
+        return MapEntry(key, _prefs.get(key));
+      }).toList();
+
+      final jsonStr = jsonEncode(allData);
+      WebStorageBase.setItem('shared_preferences_backup', jsonStr);
+    }
+>>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
   }
 
-  // Budgets Management
-  static Future<Map<String, double>> getBudgets() async {
-    final budgetsJson = _prefs?.getString(_budgetsKey);
-    if (budgetsJson == null) return {};
-    
-    final Map<String, dynamic> budgetsMap = json.decode(budgetsJson);
-    return budgetsMap.map((key, value) => MapEntry(key, value.toDouble()));
+  Future<void> _restoreFromLocalStorageIfNeeded() async {
+    if (kIsWeb) {
+      final backupStr = WebStorageBase.getItem('shared_preferences_backup');
+      if (backupStr != null) {
+        try {
+          final List<dynamic> allData = jsonDecode(backupStr);
+          for (final entry in allData) {
+            final key = entry['key'] as String;
+            final value = entry['value'];
+            await setValue(key, value);
+          }
+        } catch (e) {
+          print('Error restoring from localStorage: $e');
+        }
+      }
+    }
   }
 
-  static Future<void> saveBudgets(Map<String, double> budgets) async {
-    final budgetsJson = json.encode(budgets);
-    await _prefs?.setString(_budgetsKey, budgetsJson);
+  dynamic getValue(String key, {dynamic defaultValue}) {
+    return _prefs.get(key) ?? defaultValue;
   }
 
-  // App State Management
-  static bool get isFirstRun {
-    return _prefs?.getBool(_firstRunKey) ?? true;
+  Future<void> removeValue(String key) async {
+    await _prefs.remove(key);
+    if (kIsWeb) {
+      await _backupAllDataToLocalStorage();
+    }
   }
 
-  static Future<void> markFirstRunComplete() async {
-    await _prefs?.setBool(_firstRunKey, false);
-  }
-
-  // Data Management
-  static Future<void> clearAllData() async {
-    await _prefs?.remove(_categoriesKey);
-    await _prefs?.remove(_transactionsKey);
-    await _prefs?.remove(_budgetsKey);
-    print('🧹 All data cleared');
-  }
-
-  static Future<Map<String, dynamic>> getStorageStats() async {
-    final categories = await getCategories();
-    final transactions = await getTransactions();
-    final budgets = await getBudgets();
-    
-    return {
-      'categories': categories.length,
-      'transactions': transactions.length,
-      'budgets': budgets.length,
-      'isFirstRun': isFirstRun,
-    };
+  Future<void> clear() async {
+    await _prefs.clear();
+    if (kIsWeb) {
+      WebStorageBase.setItem('shared_preferences_backup', '[]');
+    }
   }
 
   /// Get a list from storage

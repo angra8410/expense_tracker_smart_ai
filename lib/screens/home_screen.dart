@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../services/web_storage_service.dart';
 import '../services/settings_service.dart';
+import '../services/transactions_service.dart';
 import '../models/transaction.dart';
-import '../models/category.dart';
+import '../widgets/edit_transaction_dialog.dart';
+import '../screens/recurring_transactions_screen.dart';
+import '../screens/import_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int)? onNavigateToTab;
@@ -77,6 +80,10 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       case 'aiInsightsDesc': return isSpanish ? 'Inteligencia financiera inteligente' : 'Smart financial intelligence';
       case 'testLab': return isSpanish ? 'Laboratorio de Pruebas' : 'Test Lab';
       case 'testLabDesc': return isSpanish ? 'Generar datos de prueba para IA' : 'Generate test data for AI';
+      case 'recurringTransactions': return isSpanish ? 'Transacciones Recurrentes' : 'Recurring Transactions';
+      case 'recurringTransactionsDesc': return isSpanish ? 'Gestionar transacciones automáticas' : 'Manage automatic transactions';
+      case 'importStatement': return isSpanish ? 'Importar Estado' : 'Import Statement';
+      case 'importStatementDesc': return isSpanish ? 'Importar archivo CSV del banco' : 'Import bank statement CSV file';
       case 'recentTransactions': return isSpanish ? '📊 Transacciones Recientes' : '📊 Recent Transactions';
       case 'viewAll': return isSpanish ? 'Ver Todo' : 'View All';
       case 'noTransactions': return isSpanish ? 'No hay transacciones aún' : 'No transactions yet';
@@ -96,13 +103,30 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     });
 
     try {
-      final transactions = await WebStorageService.getTransactions();
-      final realTransactions = transactions.where((t) => !t.id.startsWith('test_')).toList();
+      // Load transactions from both storage services (excluding test data)
+      final webTransactions = await WebStorageService.getTransactions(includeTestData: false);
+      final localTransactions = await TransactionsService.getTransactions(includeTestData: false);
+      
+      // Merge transactions from both sources, avoiding duplicates by ID
+      final Map<String, Transaction> transactionMap = {};
+      
+      // Add all web transactions to the map
+      for (final tx in webTransactions) {
+        transactionMap[tx.id] = tx;
+      }
+      
+      // Add all local transactions to the map (will overwrite duplicates)
+      for (final tx in localTransactions) {
+        transactionMap[tx.id] = tx;
+      }
+      
+      // Convert map back to list
+      final List<Transaction> allTransactions = transactionMap.values.toList();
       
       double income = 0.0;
       double expenses = 0.0;
 
-      for (final transaction in transactions) {
+      for (final transaction in allTransactions) {
         if (transaction.type == TransactionType.income) {
           income += transaction.amount;
         } else {
@@ -110,14 +134,14 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         }
       }
 
-      final sortedTransactions = List<Transaction>.from(transactions)
+      final sortedTransactions = List<Transaction>.from(allTransactions)
         ..sort((a, b) => b.date.compareTo(a.date));
 
       setState(() {
         _totalIncome = income;
         _totalExpenses = expenses;
-        _transactionCount = transactions.length;
-        _realTransactionCount = realTransactions.length;
+        _transactionCount = allTransactions.length;
+        _realTransactionCount = allTransactions.length; // All transactions are now real
         _recentTransactions = sortedTransactions.take(5).toList();
       });
     } catch (e) {
@@ -313,6 +337,16 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                 children: [
                   Expanded(
                     child: _buildQuickActionCard(
+                      title: _getLocalizedText('recurringTransactions'),
+                      description: _getLocalizedText('recurringTransactionsDesc'),
+                      icon: Icons.repeat,
+                      color: Colors.teal,
+                      onTap: () => _navigateToRecurringTransactions(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildQuickActionCard(
                       title: 'AI Insights',
                       description: _getLocalizedText('aiInsightsDesc'),
                       icon: Icons.psychology,
@@ -320,7 +354,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                       onTap: () => _navigateToTab(3),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
                   Expanded(
                     child: _buildQuickActionCard(
                       title: _getLocalizedText('testLab'),
@@ -328,6 +368,21 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                       icon: Icons.science,
                       color: Colors.green,
                       onTap: () => _navigateToTab(4),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      title: _getLocalizedText('importStatement'),
+                      description: _getLocalizedText('importStatementDesc'),
+                      icon: Icons.upload_file,
+                      color: Colors.indigo,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ImportScreen(),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -570,93 +625,122 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     final isIncome = transaction.type == TransactionType.income;
     final isTestTransaction = transaction.id.startsWith('test_');
     
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isTestTransaction ? Colors.orange[200]! : Colors.grey[200]!,
+    return GestureDetector(
+      onTap: () => _editTransaction(transaction),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isTestTransaction ? Colors.orange[200]! : Colors.grey[200]!,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isIncome ? Colors.green[100] : Colors.red[100],
-              borderRadius: BorderRadius.circular(20),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isIncome ? Colors.green[100] : Colors.red[100],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                isIncome ? Icons.add_circle : Icons.remove_circle,
+                color: isIncome ? Colors.green[600] : Colors.red[600],
+                size: 20,
+              ),
             ),
-            child: Icon(
-              isIncome ? Icons.add_circle : Icons.remove_circle,
-              color: isIncome ? Colors.green[600] : Colors.red[600],
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        transaction.description,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (isTestTransaction)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
                         child: Text(
-                          'TEST',
-                          style: TextStyle(
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange[700],
+                          transaction.description,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isTestTransaction)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'TEST',
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange[700],
+                            ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
-                Text(
-                  transaction.date.toString().substring(0, 10),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                    ],
                   ),
+                  Text(
+                    transaction.date.toString().substring(0, 10),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${isIncome ? '+' : '-'}${_formatAmount(transaction.amount)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isIncome ? Colors.green[600] : Colors.red[600],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.edit,
+                  size: 16,
+                  color: Colors.grey[400],
                 ),
               ],
             ),
-          ),
-          Text(
-            '${isIncome ? '+' : '-'}${_formatAmount(transaction.amount)}',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: isIncome ? Colors.green[600] : Colors.red[600],
-            ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editTransaction(Transaction transaction) async {
+    await showDialog(
+      context: context,
+      builder: (context) => EditTransactionDialog(
+        transaction: transaction,
+        onTransactionUpdated: (updatedTransaction) {
+          _loadDashboardData();
+        },
+        onTransactionDeleted: () {
+          _loadDashboardData();
+        },
       ),
     );
   }
@@ -674,5 +758,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         ),
       );
     }
+  }
+
+  void _navigateToRecurringTransactions() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const RecurringTransactionsScreen(),
+      ),
+    );
   }
 }

@@ -8,7 +8,9 @@ import 'screens/intelligence_screen.dart';
 import 'screens/testing_screen.dart';
 import 'services/app_initialization_service.dart';
 import 'services/settings_service.dart';
+import 'services/transactions_service.dart';
 import 'services/web_storage_service.dart';
+import 'services/recurring_transactions_service.dart';
 import 'l10n/app_localizations.dart'; // Generated localization
 
 void main() async {
@@ -17,6 +19,14 @@ void main() async {
   try {
     await AppInitializationService.initialize();
     await WebStorageService.initialize(); // <-- Initialize your storage here
+    
+    // Ensure TransactionsService is also initialized by loading transactions
+    await TransactionsService.getTransactions();
+    
+    // Initialize recurring transactions service
+    await RecurringTransactionsService.initialize();
+    
+    print('✅ All services initialized successfully');
   } catch (e) {
     print('Initialization failed: $e');
   }
@@ -142,23 +152,23 @@ class _MainScreenState extends State<MainScreen> {
             widget.onLanguageChanged(locale);
           },
           itemBuilder: (context) => [
-            PopupMenuItem(
+            const PopupMenuItem(
               value: 'en',
               child: Row(
                 children: [
-                  const Text('🇺🇸'),
-                  const SizedBox(width: 8),
-                  const Text('English'),
+                  Text('🇺🇸'),
+                  SizedBox(width: 8),
+                  Text('English'),
                 ],
               ),
             ),
-            PopupMenuItem(
+            const PopupMenuItem(
               value: 'es',
               child: Row(
                 children: [
-                  const Text('🇪🇸'),
-                  const SizedBox(width: 8),
-                  const Text('Español'),
+                  Text('🇪🇸'),
+                  SizedBox(width: 8),
+                  Text('Español'),
                 ],
               ),
             ),
@@ -190,33 +200,33 @@ class _MainScreenState extends State<MainScreen> {
             widget.onCurrencyChanged(currency);
           },
           itemBuilder: (context) => [
-            PopupMenuItem(
+            const PopupMenuItem(
               value: 'COP',
               child: Row(
                 children: [
-                  const Text('🇨🇴'),
-                  const SizedBox(width: 8),
-                  const Text('COP'),
+                  Text('🇨🇴'),
+                  SizedBox(width: 8),
+                  Text('COP'),
                 ],
               ),
             ),
-            PopupMenuItem(
+            const PopupMenuItem(
               value: 'USD',
               child: Row(
                 children: [
-                  const Text('🇺🇸'),
-                  const SizedBox(width: 8),
-                  const Text('USD'),
+                  Text('🇺🇸'),
+                  SizedBox(width: 8),
+                  Text('USD'),
                 ],
               ),
             ),
-            PopupMenuItem(
+            const PopupMenuItem(
               value: 'EUR',
               child: Row(
                 children: [
-                  const Text('🇪🇺'),
-                  const SizedBox(width: 8),
-                  const Text('EUR'),
+                  Text('🇪🇺'),
+                  SizedBox(width: 8),
+                  Text('EUR'),
                 ],
               ),
             ),
@@ -318,6 +328,10 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!; // Generated localization
+    
+    // Set context for alerts in storage services
+    WebStorageService.setContext(context);
+    TransactionsService.setContext(context);
     
     return Scaffold(
       appBar: AppBar(
