@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/transaction.dart';
 import '../models/category.dart';
 import '../services/web_storage_service.dart';
+import '../services/category_service.dart';
 
 class EditTransactionDialog extends StatefulWidget {
   final Transaction transaction;
-  final Function(Transaction) onTransactionUpdated;
+  final VoidCallback? onTransactionUpdated;
   final VoidCallback? onTransactionDeleted;
 
   const EditTransactionDialog({
     Key? key,
     required this.transaction,
-    required this.onTransactionUpdated,
+    this.onTransactionUpdated,
     this.onTransactionDeleted,
   }) : super(key: key);
 
@@ -22,33 +24,32 @@ class EditTransactionDialog extends StatefulWidget {
 class _EditTransactionDialogState extends State<EditTransactionDialog> {
   late TextEditingController _descriptionController;
   late TextEditingController _amountController;
-  late DateTime _selectedDate;
   late TransactionType _selectedType;
   late String _selectedCategoryId;
+  late DateTime _selectedDate;
+  
   List<Category> _categories = [];
   bool _isLoading = false;
+
+  // Add missing id getter
+  String get id => widget.transaction.id;
 
   @override
   void initState() {
     super.initState();
     _descriptionController = TextEditingController(text: widget.transaction.description);
-    _amountController = TextEditingController(text: widget.transaction.amount.abs().toString());
-    _selectedDate = widget.transaction.date;
+    _amountController = TextEditingController(text: widget.transaction.amount.toString());
     _selectedType = widget.transaction.type;
     _selectedCategoryId = widget.transaction.categoryId;
+    _selectedDate = widget.transaction.date;
     _loadCategories();
   }
 
   Future<void> _loadCategories() async {
     try {
-      final categories = await WebStorageService.getCategories();
+      final categories = await CategoryService.getCategories();
       setState(() {
         _categories = categories;
-        // Ensure selected category exists
-        if (_selectedCategoryId.isNotEmpty && 
-            !categories.any((cat) => cat.id == _selectedCategoryId)) {
-          _selectedCategoryId = categories.isNotEmpty ? categories.first.id : '';
-        }
       });
     } catch (e) {
       print('Error loading categories: $e');
@@ -62,12 +63,12 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
     super.dispose();
   }
 
-  Future<void> _selectDate() async {
+  Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      lastDate: DateTime.now(),
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
@@ -77,9 +78,9 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
   }
 
   Future<void> _updateTransaction() async {
-    if (_descriptionController.text.trim().isEmpty) {
+    if (_descriptionController.text.isEmpty || _amountController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a description')),
+        const SnackBar(content: Text('Please fill in all fields')),
       );
       return;
     }
@@ -97,28 +98,19 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
     });
 
     try {
-      final updatedTransaction = Transaction(
-        id: widget.transaction.id,
-        description: _descriptionController.text.trim(),
-        amount: _selectedType == TransactionType.expense ? -amount : amount,
-        date: _selectedDate,
+      final updatedTransaction = widget.transaction.copyWith(
+        description: _descriptionController.text,
+        amount: amount,
         type: _selectedType,
         categoryId: _selectedCategoryId,
-        accountId: widget.transaction.accountId,
-        createdAt: widget.transaction.createdAt,
+        date: _selectedDate,
       );
 
       await WebStorageService.updateTransaction(updatedTransaction);
-      widget.onTransactionUpdated(updatedTransaction);
       
       if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Transaction updated successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        widget.onTransactionUpdated?.call();
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -136,11 +128,11 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
   }
 
   Future<void> _deleteTransaction() async {
-    final bool? confirmed = await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Transaction'),
-        content: const Text('Are you sure you want to delete this transaction? This action cannot be undone.'),
+        content: const Text('Are you sure you want to delete this transaction?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -148,7 +140,6 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
           ),
         ],
@@ -162,18 +153,10 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
 
       try {
         await WebStorageService.deleteTransaction(widget.transaction.id);
-        if (widget.onTransactionDeleted != null) {
-          widget.onTransactionDeleted!();
-        }
         
         if (mounted) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Transaction deleted successfully'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          widget.onTransactionDeleted?.call();
+          Navigator.of(context).pop(true);
         }
       } catch (e) {
         if (mounted) {
@@ -199,38 +182,9 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _amountController,
-              decoration: const InputDecoration(
-                labelText: 'Amount',
-                border: OutlineInputBorder(),
-                prefixText: '\$',
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
+            // Transaction Type
             Row(
               children: [
-                Expanded(
-                  child: RadioListTile<TransactionType>(
-                    title: const Text('Income'),
-                    value: TransactionType.income,
-                    groupValue: _selectedType,
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedType = value!;
-                      });
-                    },
-                  ),
-                ),
                 Expanded(
                   child: RadioListTile<TransactionType>(
                     title: const Text('Expense'),
@@ -243,41 +197,68 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                     },
                   ),
                 ),
+                Expanded(
+                  child: RadioListTile<TransactionType>(
+                    title: const Text('Income'),
+                    value: TransactionType.income,
+                    groupValue: _selectedType,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedType = value!;
+                      });
+                    },
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            if (_categories.isNotEmpty)
-              DropdownButtonFormField<String>(
-                value: _selectedCategoryId.isEmpty ? null : _selectedCategoryId,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(),
-                ),
-                items: _categories.map((category) {
-                  return DropdownMenuItem<String>(
-                    value: category.id,
-                    child: Text(category.name),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategoryId = value ?? '';
-                  });
-                },
+            
+            // Description
+            TextField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                border: OutlineInputBorder(),
               ),
+            ),
             const SizedBox(height: 16),
-            InkWell(
-              onTap: _selectDate,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Date',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today),
-                ),
-                child: Text(
-                  '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
-                ),
+            
+            // Amount
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Amount',
+                border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Category
+            DropdownButtonFormField<String>(
+              value: _selectedCategoryId,
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                border: OutlineInputBorder(),
+              ),
+              items: _categories.map((category) {
+                return DropdownMenuItem<String>(
+                  value: category.id,
+                  child: Text(category.name),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedCategoryId = value!;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Date
+            ListTile(
+              title: Text('Date: ${_selectedDate.toString().split(' ')[0]}'),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () => _selectDate(context),
             ),
           ],
         ),
@@ -289,12 +270,11 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
         ),
         TextButton(
           onPressed: _isLoading ? null : _deleteTransaction,
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
           child: const Text('Delete'),
         ),
         ElevatedButton(
           onPressed: _isLoading ? null : _updateTransaction,
-          child: _isLoading
+          child: _isLoading 
               ? const SizedBox(
                   width: 16,
                   height: 16,

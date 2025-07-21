@@ -8,6 +8,31 @@ import 'category_service.dart';
 
 class BudgetService {
   static const String _budgetsKey = 'budgets';
+  
+  // Add callback mechanism for budget updates
+  static final List<VoidCallback> _budgetUpdateCallbacks = [];
+  
+  /// Register a callback to be called when budgets need to be refreshed
+  static void addBudgetUpdateListener(VoidCallback callback) {
+    _budgetUpdateCallbacks.add(callback);
+  }
+  
+  /// Remove a callback
+  static void removeBudgetUpdateListener(VoidCallback callback) {
+    _budgetUpdateCallbacks.remove(callback);
+  }
+  
+  /// Notify all listeners that budgets should be refreshed
+  static void notifyBudgetUpdate() {
+    print('🔄 Notifying ${_budgetUpdateCallbacks.length} budget listeners to refresh');
+    for (final callback in _budgetUpdateCallbacks) {
+      try {
+        callback();
+      } catch (e) {
+        print('❌ Error calling budget update callback: $e');
+      }
+    }
+  }
 
   /// Create a budget from a smart recommendation
   static Future<Budget> createSmartBudget(BudgetRecommendation recommendation) async {
@@ -24,6 +49,7 @@ class BudgetService {
     );
 
     await _saveBudget(budget);
+    notifyBudgetUpdate(); // Notify listeners
     return budget;
   }
 
@@ -69,15 +95,7 @@ class BudgetService {
   /// Calculate budget progress with rollover support
   static Future<BudgetProgress> getBudgetProgress(Budget budget) async {
     try {
-      final transactions = await WebStorageService.getTransactions();
-      
-      print('🔍 DEBUG: Budget Progress Calculation');
-      print('📊 Budget: ${budget.name} (ID: ${budget.categoryId})');
-      print('📅 Budget Period: ${budget.startDate} to ${budget.endDate}');
-      print('💰 Budget Amount: ${budget.amount}');
-      print('🔄 Rollover Amount: ${budget.rolloverAmount}');
-      print('💰 Total Budget: ${budget.totalBudgetAmount}');
-      print('📝 Total Transactions: ${transactions.length}');
+      final transactions = await WebStorageService.getTransactions(includeTestData: false);
       
       final budgetTransactions = transactions.where((transaction) {
         final categoryMatch = transaction.categoryId == budget.categoryId;
@@ -88,10 +106,7 @@ class BudgetService {
         return categoryMatch && typeMatch && dateAfterStart && dateBeforeEnd;
       }).toList();
 
-      print('✅ Matching transactions: ${budgetTransactions.length}');
-
       final totalSpent = budgetTransactions.fold(0.0, (sum, transaction) => sum + transaction.amount);
-      print('💸 Total Spent: $totalSpent');
       
       final remainingAmount = budget.totalBudgetAmount - totalSpent;
       final progressPercentage = budget.totalBudgetAmount > 0 ? (totalSpent / budget.totalBudgetAmount) * 100 : 0.0;
@@ -125,6 +140,9 @@ class BudgetService {
         ));
       }
 
+      // Add a simple debug print to track refresh issues
+      print('💰 Budget "${budget.name}": ${budgetTransactions.length} transactions, total spent: $totalSpent');
+
       return BudgetProgress(
         budget: budget,
         spent: totalSpent,
@@ -149,7 +167,7 @@ class BudgetService {
   /// Get smart budget recommendations
   static Future<List<BudgetRecommendation>> getBudgetRecommendations() async {
     try {
-      final transactions = await WebStorageService.getTransactions();
+      final transactions = await WebStorageService.getTransactions(includeTestData: false);
       final categories = await CategoryService.getCategories();
       
       if (transactions.isEmpty || categories.isEmpty) {

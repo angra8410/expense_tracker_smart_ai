@@ -1,210 +1,465 @@
 import 'dart:convert';
-<<<<<<< HEAD
-import 'dart:html' as html;
-=======
-import 'package:flutter/foundation.dart';
->>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
 import 'package:shared_preferences/shared_preferences.dart';
-import 'web_storage_base.dart';
+import '../models/transaction.dart';
+import '../models/category.dart';
+import '../models/recurring_transaction.dart';
+import 'budget_notification_service.dart';
 
 class WebStorageService {
-  static WebStorageService? _instance;
-  late SharedPreferences _prefs;
-  static BuildContext? _context;
+  static SharedPreferences? _prefs;
 
-  WebStorageService._();
-
-  static Future<void> initialize() async {
-    if (_instance == null) {
-      _instance = WebStorageService._();
-      await _instance!._init();
-    }
-  }
-
-<<<<<<< HEAD
-  // Generic Data Storage Methods
-  static Future<String?> getString(String key) async {
-    return _prefs?.getString(key);
-  }
-
-  static Future<void> setString(String key, String value) async {
-    await _prefs?.setString(key, value);
-  }
-
-  static Future<dynamic> getData(String key) async {
-    final jsonString = _prefs?.getString(key);
-    if (jsonString == null) return null;
-    return json.decode(jsonString);
-  }
-
-  static Future<void> saveData(String key, dynamic data) async {
-    final jsonString = json.encode(data);
-    await _prefs?.setString(key, jsonString);
-  }
-
-  // Categories Management
-  static Future<List<Category>> getCategories() async {
-    final categoriesJson = _prefs?.getString(_categoriesKey);
-    if (categoriesJson == null) return [];
-    
-    final List<dynamic> categoriesList = json.decode(categoriesJson);
-    return categoriesList.map((json) => Category.fromJson(json)).toList();
-=======
-  static void setContext(BuildContext context) {
-    _context = context;
->>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
-  }
-
-  static Future<WebStorageService> getInstance() async {
-    if (_instance == null) {
-      await initialize();
-    }
-    return _instance!;
-  }
-
-  Future<void> _init() async {
+  static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
-    if (kIsWeb) {
-      await _restoreFromLocalStorageIfNeeded();
+  }
+
+  static SharedPreferences get _instance {
+    if (_prefs == null) {
+      throw Exception('WebStorageService not initialized. Call init() first.');
+    }
+    return _prefs!;
+  }
+
+  // Basic storage methods
+  static Future<void> setString(String key, String value) async {
+    await _instance.setString(key, value);
+  }
+
+  static String? getString(String key) {
+    return _instance.getString(key);
+  }
+
+  static Future<void> setBool(String key, bool value) async {
+    await _instance.setBool(key, value);
+  }
+
+  static bool? getBool(String key) {
+    return _instance.getBool(key);
+  }
+
+  static Future<void> setInt(String key, int value) async {
+    await _instance.setInt(key, value);
+  }
+
+  static int? getInt(String key) {
+    return _instance.getInt(key);
+  }
+
+  static Future<void> setDouble(String key, double value) async {
+    await _instance.setDouble(key, value);
+  }
+
+  static double? getDouble(String key) {
+    return _instance.getDouble(key);
+  }
+
+  static Future<void> remove(String key) async {
+    await _instance.remove(key);
+  }
+
+  static Future<void> clear() async {
+    await _instance.clear();
+  }
+
+  // JSON encoding/decoding helpers
+  static String jsonEncode(dynamic object) {
+    return json.encode(object);
+  }
+
+  static dynamic jsonDecode(String source) {
+    return json.decode(source);
+  }
+
+  // Generic data methods
+  static Future<void> saveData(String key, Map<String, dynamic> data) async {
+    await setString(key, jsonEncode(data));
+  }
+
+  static Map<String, dynamic>? getData(String key) {
+    final jsonString = getString(key);
+    if (jsonString != null) {
+      try {
+        return Map<String, dynamic>.from(jsonDecode(jsonString));
+      } catch (e) {
+        print('Error parsing JSON for key $key: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  // List and Map methods for ML service
+  static Future<void> saveList(String key, List<Map<String, dynamic>> data) async {
+    await setString(key, jsonEncode(data));
+  }
+
+  static Future<List<Map<String, dynamic>>> getList(String key) async {
+    final jsonString = getString(key);
+    if (jsonString != null) {
+      try {
+        final decoded = jsonDecode(jsonString);
+        if (decoded is List) {
+          return decoded.cast<Map<String, dynamic>>();
+        }
+      } catch (e) {
+        print('Error parsing list for key $key: $e');
+      }
+    }
+    return [];
+  }
+
+  static Future<void> saveMap(String key, Map<String, dynamic> data) async {
+    await setString(key, jsonEncode(data));
+  }
+
+  static Future<Map<String, dynamic>?> getMap(String key) async {
+    final jsonString = getString(key);
+    if (jsonString != null) {
+      try {
+        final decoded = jsonDecode(jsonString);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+      } catch (e) {
+        print('Error parsing map for key $key: $e');
+      }
+    }
+    return null;
+  }
+
+  // Category methods
+  static Future<List<Category>> getCategories() async {
+    final jsonString = getString('categories');
+    if (jsonString != null) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonString);
+        return jsonList.map((json) => Category.fromJson(json)).toList();
+      } catch (e) {
+        print('Error loading categories: $e');
+        return [];
+      }
+    }
+    return [];
+  }
+
+  static Future<void> saveCategories(List<Category> categories) async {
+    try {
+      final jsonList = categories.map((category) => category.toJson()).toList();
+      await setString('categories', jsonEncode(jsonList));
+    } catch (e) {
+      print('Error saving categories: $e');
+      throw Exception('Failed to save categories: $e');
     }
   }
 
-  Future<void> setValue(String key, dynamic value) async {
-    if (value is String) {
-      await _prefs.setString(key, value);
-    } else if (value is bool) {
-      await _prefs.setBool(key, value);
-    } else if (value is int) {
-      await _prefs.setInt(key, value);
-    } else if (value is double) {
-      await _prefs.setDouble(key, value);
-    } else if (value is List<String>) {
-      await _prefs.setStringList(key, value);
-    } else {
-      final jsonStr = jsonEncode(value);
-      await _prefs.setString(key, jsonStr);
-    }
-
-    if (kIsWeb) {
-      await _backupAllDataToLocalStorage();
+  static Future<void> addCategory(Category category) async {
+    try {
+      final categories = await getCategories();
+      categories.add(category);
+      await saveCategories(categories);
+    } catch (e) {
+      print('Error adding category: $e');
+      throw Exception('Failed to add category: $e');
     }
   }
 
-<<<<<<< HEAD
+  // Transaction methods
+  static Future<List<Transaction>> getTransactions({bool includeTestData = true}) async {
+    final jsonString = getString('transactions');
+    if (jsonString != null) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonString);
+        final allTransactions = jsonList.map((json) => Transaction.fromJson(json)).toList();
+        
+        if (!includeTestData) {
+          // Filter out test transactions (those with IDs starting with 'debug_' or 'test_')
+          return allTransactions.where((tx) => 
+            !tx.id.startsWith('debug_') && 
+            !tx.id.startsWith('test_') &&
+            !tx.description.toLowerCase().contains('debug') &&
+            !tx.description.toLowerCase().contains('test')
+          ).toList();
+        }
+        
+        return allTransactions;
+      } catch (e) {
+        print('Error loading transactions: $e');
+        return [];
+      }
+    }
+    return [];
+  }
+
   static Future<void> saveTransactions(List<Transaction> transactions) async {
-    final transactionsJson = json.encode(transactions.map((t) => t.toJson()).toList());
-    await _prefs?.setString(_transactionsKey, transactionsJson);
+    try {
+      final jsonList = transactions.map((transaction) => transaction.toJson()).toList();
+      await setString('transactions', jsonEncode(jsonList));
+      
+      // Notify budget service that transactions have changed
+      BudgetNotificationService.notifyBudgetUpdate();
+      print('💰 Transactions saved and budget listeners notified');
+    } catch (e) {
+      print('Error saving transactions: $e');
+      throw Exception('Failed to save transactions: $e');
+    }
   }
-  
+
   static Future<void> addTransaction(Transaction transaction) async {
     try {
       final transactions = await getTransactions();
       transactions.add(transaction);
-      await saveTransactions(transactions);
-      print('✅ Single transaction added: ${transaction.description}');
+      await saveTransactions(transactions); // This will trigger budget notification
     } catch (e) {
-      print('❌ Error adding single transaction: $e');
-      throw e;
+      print('Error adding transaction: $e');
+      throw Exception('Failed to add transaction: $e');
     }
   }
 
   static Future<void> addTransactions(List<Transaction> newTransactions) async {
-    final transactions = await getTransactions();
-    transactions.addAll(newTransactions);
-    await saveTransactions(transactions);
-=======
-  Future<void> _backupAllDataToLocalStorage() async {
-    if (kIsWeb) {
-      final allData = _prefs.getKeys().map((key) {
-        return MapEntry(key, _prefs.get(key));
-      }).toList();
-
-      final jsonStr = jsonEncode(allData);
-      WebStorageBase.setItem('shared_preferences_backup', jsonStr);
+    try {
+      final transactions = await getTransactions();
+      transactions.addAll(newTransactions);
+      await saveTransactions(transactions); // This will trigger budget notification
+    } catch (e) {
+      print('Error adding transactions: $e');
+      throw Exception('Failed to add transactions: $e');
     }
->>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
   }
 
-  Future<void> _restoreFromLocalStorageIfNeeded() async {
-    if (kIsWeb) {
-      final backupStr = WebStorageBase.getItem('shared_preferences_backup');
-      if (backupStr != null) {
-        try {
-          final List<dynamic> allData = jsonDecode(backupStr);
-          for (final entry in allData) {
-            final key = entry['key'] as String;
-            final value = entry['value'];
-            await setValue(key, value);
-          }
-        } catch (e) {
-          print('Error restoring from localStorage: $e');
-        }
+  static Future<void> updateTransaction(Transaction updatedTransaction) async {
+    try {
+      final transactions = await getTransactions();
+      final index = transactions.indexWhere((t) => t.id == updatedTransaction.id);
+      if (index != -1) {
+        transactions[index] = updatedTransaction;
+        await saveTransactions(transactions); // This will trigger budget notification
+      }
+    } catch (e) {
+      print('Error updating transaction: $e');
+      throw Exception('Failed to update transaction: $e');
+    }
+  }
+
+  static Future<void> deleteTransaction(String transactionId) async {
+    try {
+      final transactions = await getTransactions();
+      transactions.removeWhere((t) => t.id == transactionId);
+      await saveTransactions(transactions); // This will trigger budget notification
+    } catch (e) {
+      print('Error deleting transaction: $e');
+      throw Exception('Failed to delete transaction: $e');
+    }
+  }
+
+  // Helper method to notify budget updates (avoiding circular import)
+  static void _notifyBudgetUpdate() {
+    try {
+      // Use dynamic import to avoid circular dependency
+      final budgetServiceType = _getBudgetServiceType();
+      if (budgetServiceType != null) {
+        budgetServiceType.call('notifyBudgetUpdate');
+      }
+    } catch (e) {
+      print('Could not notify budget update: $e');
+    }
+  }
+
+  static Function? _getBudgetServiceType() {
+    try {
+      // This is a workaround to avoid circular imports
+      // We'll implement this differently
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Recurring Transaction methods
+  static Future<List<RecurringTransaction>> getRecurringTransactions() async {
+    final jsonString = getString('recurring_transactions');
+    if (jsonString != null) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonString);
+        return jsonList.map((json) => RecurringTransaction.fromJson(json)).toList();
+      } catch (e) {
+        print('Error loading recurring transactions: $e');
+        return [];
       }
     }
+    return [];
   }
 
-  dynamic getValue(String key, {dynamic defaultValue}) {
-    return _prefs.get(key) ?? defaultValue;
-  }
-
-  Future<void> removeValue(String key) async {
-    await _prefs.remove(key);
-    if (kIsWeb) {
-      await _backupAllDataToLocalStorage();
-    }
-  }
-
-  Future<void> clear() async {
-    await _prefs.clear();
-    if (kIsWeb) {
-      WebStorageBase.setItem('shared_preferences_backup', '[]');
-    }
-  }
-
-  /// Get a list from storage
-  static Future<List<Map<String, dynamic>>> getList(String key) async {
+  static Future<void> saveRecurringTransactions(List<RecurringTransaction> recurringTransactions) async {
     try {
-      final jsonString = html.window.localStorage[key];
-      if (jsonString == null) return [];
-      
-      final List<dynamic> jsonList = jsonDecode(jsonString);
-      return jsonList.cast<Map<String, dynamic>>();
+      final jsonList = recurringTransactions.map((rt) => rt.toJson()).toList();
+      await setString('recurring_transactions', jsonEncode(jsonList));
     } catch (e) {
-      print('Error getting list from storage: $e');
+      print('Error saving recurring transactions: $e');
+      throw Exception('Failed to save recurring transactions: $e');
+    }
+  }
+
+  static Future<void> addRecurringTransaction(RecurringTransaction recurringTransaction) async {
+    try {
+      final recurringTransactions = await getRecurringTransactions();
+      recurringTransactions.add(recurringTransaction);
+      await saveRecurringTransactions(recurringTransactions);
+    } catch (e) {
+      print('Error adding recurring transaction: $e');
+      throw Exception('Failed to add recurring transaction: $e');
+    }
+  }
+
+  static Future<void> updateRecurringTransaction(RecurringTransaction updatedRecurringTransaction) async {
+    try {
+      final recurringTransactions = await getRecurringTransactions();
+      final index = recurringTransactions.indexWhere((rt) => rt.id == updatedRecurringTransaction.id);
+      if (index != -1) {
+        recurringTransactions[index] = updatedRecurringTransaction;
+        await saveRecurringTransactions(recurringTransactions);
+      } else {
+        throw Exception('Recurring transaction not found');
+      }
+    } catch (e) {
+      print('Error updating recurring transaction: $e');
+      throw Exception('Failed to update recurring transaction: $e');
+    }
+  }
+
+  static Future<void> deleteRecurringTransaction(String recurringTransactionId) async {
+    try {
+      final recurringTransactions = await getRecurringTransactions();
+      recurringTransactions.removeWhere((rt) => rt.id == recurringTransactionId);
+      await saveRecurringTransactions(recurringTransactions);
+    } catch (e) {
+      print('Error deleting recurring transaction: $e');
+      throw Exception('Failed to delete recurring transaction: $e');
+    }
+  }
+
+  // Backup and restore methods
+  static Future<Map<String, dynamic>> exportAllData() async {
+    try {
+      final transactions = await getTransactions();
+      final categories = await getCategories();
+      final recurringTransactions = await getRecurringTransactions();
+
+      return {
+        'transactions': transactions.map((t) => t.toJson()).toList(),
+        'categories': categories.map((c) => c.toJson()).toList(),
+        'recurring_transactions': recurringTransactions.map((rt) => rt.toJson()).toList(),
+        'export_date': DateTime.now().toIso8601String(),
+        'version': '1.0',
+      };
+    } catch (e) {
+      print('Error exporting data: $e');
+      throw Exception('Failed to export data: $e');
+    }
+  }
+
+  static Future<void> importAllData(Map<String, dynamic> data) async {
+    try {
+      // Import transactions
+      if (data['transactions'] != null) {
+        final List<dynamic> transactionsList = data['transactions'];
+        final transactions = transactionsList.map((json) => Transaction.fromJson(json)).toList();
+        await saveTransactions(transactions);
+      }
+
+      // Import categories
+      if (data['categories'] != null) {
+        final List<dynamic> categoriesList = data['categories'];
+        final categories = categoriesList.map((json) => Category.fromJson(json)).toList();
+        await saveCategories(categories);
+      }
+
+      // Import recurring transactions
+      if (data['recurring_transactions'] != null) {
+        final List<dynamic> recurringTransactionsList = data['recurring_transactions'];
+        final recurringTransactions = recurringTransactionsList.map((json) => RecurringTransaction.fromJson(json)).toList();
+        await saveRecurringTransactions(recurringTransactions);
+      }
+    } catch (e) {
+      print('Error importing data: $e');
+      throw Exception('Failed to import data: $e');
+    }
+  }
+
+  // Utility methods
+  static Future<void> clearAllData() async {
+    try {
+      await remove('transactions');
+      await remove('categories');
+      await remove('recurring_transactions');
+      // Clear any other app-specific data
+      await remove('user_preferences');
+      await remove('ml_data');
+      await remove('analytics_data');
+    } catch (e) {
+      print('Error clearing all data: $e');
+      throw Exception('Failed to clear all data: $e');
+    }
+  }
+
+  static Future<bool> hasData() async {
+    try {
+      final transactions = await getTransactions();
+      final categories = await getCategories();
+      return transactions.isNotEmpty || categories.isNotEmpty;
+    } catch (e) {
+      print('Error checking for data: $e');
+      return false;
+    }
+  }
+
+  // Get category by ID
+  static Future<Category?> getCategoryById(String categoryId) async {
+    try {
+      final categories = await getCategories();
+      return categories.firstWhere(
+        (category) => category.id == categoryId,
+        orElse: () => throw StateError('Category not found'),
+      );
+    } catch (e) {
+      print('Error getting category by ID: $e');
+      return null;
+    }
+  }
+
+  // Get transaction by ID
+  static Future<Transaction?> getTransactionById(String transactionId) async {
+    try {
+      final transactions = await getTransactions();
+      return transactions.firstWhere(
+        (transaction) => transaction.id == transactionId,
+        orElse: () => throw StateError('Transaction not found'),
+      );
+    } catch (e) {
+      print('Error getting transaction by ID: $e');
+      return null;
+    }
+  }
+
+  // Add missing recurring transaction methods
+  static Future<List<RecurringTransaction>> getActiveRecurringTransactions() async {
+    try {
+      final allRecurring = await getRecurringTransactions();
+      return allRecurring.where((rt) => rt.isActive).toList();
+    } catch (e) {
+      print('Error getting active recurring transactions: $e');
       return [];
     }
   }
 
-  /// Save a list to storage
-  static Future<void> saveList(String key, List<Map<String, dynamic>> data) async {
+  static Future<RecurringTransaction?> getRecurringTransactionById(String recurringTransactionId) async {
     try {
-      final jsonString = jsonEncode(data);
-      html.window.localStorage[key] = jsonString;
+      final recurringTransactions = await getRecurringTransactions();
+      return recurringTransactions.firstWhere(
+        (rt) => rt.id == recurringTransactionId,
+        orElse: () => throw StateError('Recurring transaction not found'),
+      );
     } catch (e) {
-      print('Error saving list to storage: $e');
-    }
-  }
-
-  /// Get a map from storage
-  static Future<Map<String, dynamic>> getMap(String key) async {
-    try {
-      final jsonString = html.window.localStorage[key];
-      if (jsonString == null) return {};
-      
-      return jsonDecode(jsonString) as Map<String, dynamic>;
-    } catch (e) {
-      print('Error getting map from storage: $e');
-      return {};
-    }
-  }
-
-  /// Save a map to storage
-  static Future<void> saveMap(String key, Map<String, dynamic> data) async {
-    try {
-      final jsonString = jsonEncode(data);
-      html.window.localStorage[key] = jsonString;
-    } catch (e) {
-      print('Error saving map to storage: $e');
+      print('Error getting recurring transaction by ID: $e');
+      return null;
     }
   }
 }

@@ -7,8 +7,8 @@ class BankService {
   static const String _storageKey = 'banks';
 
   static Future<List<Bank>> getBanks() async {
-    final banksJson = await WebStorageService.getValue(_storageKey) ?? '[]';
-    final List<dynamic> banksList = await WebStorageService.jsonDecode(banksJson);
+    final banksJson = await WebStorageService.getString(_storageKey) ?? '[]';
+    final List<dynamic> banksList = WebStorageService.jsonDecode(banksJson);
     return banksList.map((json) => Bank.fromJson(json)).toList();
   }
 
@@ -37,7 +37,7 @@ class BankService {
     final banksJson = WebStorageService.jsonEncode(
       banks.map((bank) => bank.toJson()).toList(),
     );
-    await WebStorageService.setValue(_storageKey, banksJson);
+    await WebStorageService.setString(_storageKey, banksJson);
   }
 
   static Future<void> initializeDefaultBanks() async {

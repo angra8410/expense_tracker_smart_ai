@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/transaction.dart';
 import '../services/web_storage_service.dart';
-<<<<<<< HEAD
 import '../services/enhanced_ml_service.dart';
 import '../services/category_service.dart';
+import '../services/export_service.dart';
 import '../utils/quick_test.dart';
 import '../utils/data_debug_helper.dart';
-=======
-import '../services/export_service.dart';
 import '../widgets/edit_transaction_dialog.dart';
->>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
 
 class TestingScreen extends StatefulWidget {
   const TestingScreen({Key? key}) : super(key: key);
@@ -50,12 +47,8 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-<<<<<<< HEAD
-    _loadTransactions();
-=======
     // Note: Removed automatic reload to prevent duplications
     // Use the refresh button to manually reload if needed
->>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
   }
 
   Future<void> _testAddTransaction() async {
@@ -203,39 +196,43 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
     _addDebugLog('🧪 Starting Add Transaction Screen Debug');
     
     try {
-      _addDebugLog('Checking CategoryService availability...');
-      final categories = await CategoryService.getCategories();
-      _addDebugLog('✅ CategoryService returned ${categories.length} categories');
+      _addDebugLog('Simulating Add Transaction Screen workflow...');
       
-      if (categories.isNotEmpty) {
-        _addDebugLog('Sample categories:');
-        for (int i = 0; i < (categories.length > 3 ? 3 : categories.length); i++) {
-          _addDebugLog('  - ${categories[i].id}: ${categories[i].name}');
-        }
+      // Simulate the add transaction screen workflow
+      _addDebugLog('Step 1: Form initialization');
+      await Future.delayed(const Duration(milliseconds: 500));
+      _addDebugLog('✅ Form initialized');
+      
+      _addDebugLog('Step 2: Category loading');
+      final categories = await CategoryService.getCategories();
+      _addDebugLog('✅ Loaded ${categories.length} categories');
+      
+      _addDebugLog('Step 3: Form validation test');
+      final isValid = _validateFormData('50.00', 'Debug Screen Test', 'food');
+      _addDebugLog(isValid ? '✅ Form validation passed' : '❌ Form validation failed');
+      
+      if (isValid) {
+        _addDebugLog('Step 4: Creating transaction from form');
+        final transaction = Transaction(
+          id: 'debug_screen_test_${DateTime.now().millisecondsSinceEpoch}',
+          amount: 50.00,
+          description: 'Debug Screen Test',
+          categoryId: 'food',
+          date: DateTime.now(),
+          type: TransactionType.expense,
+          accountId: 'personal',
+        );
+        
+        _addDebugLog('Step 5: Saving transaction');
+        await WebStorageService.addTransaction(transaction);
+        _addDebugLog('✅ Transaction saved successfully');
+        
+        _loadTransactions();
       }
       
-      _addDebugLog('Testing transaction creation with real data...');
-      final testTransaction = Transaction(
-        id: 'debug_screen_test_${DateTime.now().millisecondsSinceEpoch}',
-        amount: 15.75,
-        description: 'Screen Debug Test',
-        categoryId: categories.isNotEmpty ? categories.first.id : 'general',
-        date: DateTime.now(),
-        type: TransactionType.expense,
-        accountId: 'personal',
-      );
-      
-      _addDebugLog('✅ Transaction object created for screen test');
-      
-      await WebStorageService.addTransaction(testTransaction);
-      _addDebugLog('✅ Transaction saved successfully');
-      
-      _loadTransactions();
       _addDebugLog('🎉 Add Transaction Screen Debug COMPLETED');
-      
-    } catch (e, stackTrace) {
+    } catch (e) {
       _addDebugLog('❌ Add Transaction Screen Debug FAILED: $e');
-      _addDebugLog('Error details: ${e.toString()}');
     } finally {
       setState(() {
         _isLoading = false;
@@ -248,10 +245,53 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
     super.build(context);
     return Scaffold(
       appBar: AppBar(
-<<<<<<< HEAD
         title: const Text('🔧 Debug & Testing'),
         backgroundColor: Colors.blue[600],
         foregroundColor: Colors.white,
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.file_download),
+            tooltip: 'Export Transactions',
+            onSelected: _handleExport,
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'json',
+                child: Row(
+                  children: [
+                    Icon(Icons.code, size: 18),
+                    SizedBox(width: 8),
+                    Text('Export as JSON'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'csv',
+                child: Row(
+                  children: [
+                    Icon(Icons.table_chart, size: 18),
+                    SizedBox(width: 8),
+                    Text('Export as CSV'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'excel',
+                child: Row(
+                  children: [
+                    Icon(Icons.grid_on, size: 18),
+                    SizedBox(width: 8),
+                    Text('Export as Excel'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Transactions',
+            onPressed: _loadTransactions,
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -437,132 +477,6 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
                           'Error loading transactions: ${snapshot.error}',
                           textAlign: TextAlign.center,
                         ),
-=======
-        title: const Text('Transactions'),
-        backgroundColor: Colors.blue[700],
-        foregroundColor: Colors.white,
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.file_download),
-            tooltip: 'Export Transactions',
-            onSelected: _handleExport,
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'json',
-                child: Row(
-                  children: [
-                    Icon(Icons.code, size: 18),
-                    SizedBox(width: 8),
-                    Text('Export as JSON'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'csv',
-                child: Row(
-                  children: [
-                    Icon(Icons.table_chart, size: 18),
-                    SizedBox(width: 8),
-                    Text('Export as CSV'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'excel',
-                child: Row(
-                  children: [
-                    Icon(Icons.grid_on, size: 18),
-                    SizedBox(width: 8),
-                    Text('Export as Excel'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh Transactions',
-            onPressed: _loadTransactions,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Transactions List
-          Expanded(
-            child: FutureBuilder<List<Transaction>>(
-              future: _transactionsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error loading transactions: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.receipt_long, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text(
-                          'No transactions yet',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Add some expenses or income, or run the storage test!',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final transactions = snapshot.data!;
-                return ListView.builder(
-                  itemCount: transactions.length,
-                  itemBuilder: (context, index) {
-                    final tx = transactions[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-                      child: ListTile(
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: tx.type == TransactionType.income ? Colors.green[100] : Colors.red[100],
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Icon(
-                            tx.type == TransactionType.income ? Icons.add_circle : Icons.remove_circle,
-                            color: tx.type == TransactionType.income ? Colors.green[600] : Colors.red[600],
-                            size: 20,
-                          ),
-                        ),
-                        title: Text(tx.description),
-                        subtitle: Text(
-                          '${tx.categoryId.isNotEmpty ? tx.categoryId : "No Category"} • ${_formatDate(tx.date)}',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${tx.type == TransactionType.income ? "+" : "-"}\$${tx.amount.abs().toStringAsFixed(2)}',
-                              style: TextStyle(
-                                color: tx.type == TransactionType.income ? Colors.green : Colors.red,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.edit,
-                              size: 16,
-                              color: Colors.grey[600],
-                            ),
-                          ],
-                        ),
-                        onTap: () => _editTransaction(tx),
->>>>>>> dd0532278731c5cc55e6d7f669d18270155e542b
                       ),
                     );
                   } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -634,13 +548,25 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
                           subtitle: Text(
                             '${tx.categoryId.isNotEmpty ? tx.categoryId : "No Category"} • ${_formatDate(tx.date)}',
                           ),
-                          trailing: Text(
-                            '${tx.type == TransactionType.income ? "+" : "-"}\$${tx.amount.abs().toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color: tx.type == TransactionType.income ? Colors.green : Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${tx.type == TransactionType.income ? "+" : "-"}\$${tx.amount.abs().toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color: tx.type == TransactionType.income ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.edit,
+                                size: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ],
                           ),
+                          onTap: () => _editTransaction(tx),
                         ),
                       );
                     },
@@ -659,11 +585,11 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
   }
 
   Future<void> _editTransaction(Transaction transaction) async {
-    await showDialog(
+    final result = await showDialog<bool>(
       context: context,
       builder: (context) => EditTransactionDialog(
         transaction: transaction,
-        onTransactionUpdated: (updatedTransaction) {
+        onTransactionUpdated: () {
           _loadTransactions();
         },
         onTransactionDeleted: () {
@@ -671,6 +597,11 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
         },
       ),
     );
+    
+    // Reload transactions if dialog returned true (indicating a change was made)
+    if (result == true) {
+      _loadTransactions();
+    }
   }
 
   Future<void> _handleExport(String format) async {

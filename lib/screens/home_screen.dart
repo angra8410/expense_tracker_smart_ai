@@ -351,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                       description: _getLocalizedText('aiInsightsDesc'),
                       icon: Icons.psychology,
                       color: Colors.purple,
-                      onTap: () => _navigateToTab(3),
+                      onTap: () => _navigateToTab(4),
                     ),
                   ),
                 ],
@@ -367,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                       description: _getLocalizedText('testLabDesc'),
                       icon: Icons.science,
                       color: Colors.green,
-                      onTap: () => _navigateToTab(4),
+                      onTap: () => _navigateToTab(5),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -453,7 +453,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                           ),
                           const SizedBox(width: 12),
                           OutlinedButton.icon(
-                            onPressed: () => _navigateToTab(4),
+                            onPressed: () => _navigateToTab(5),
                             icon: const Icon(Icons.science),
                             label: Text(_getLocalizedText('testData')),
                           ),
@@ -735,7 +735,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       context: context,
       builder: (context) => EditTransactionDialog(
         transaction: transaction,
-        onTransactionUpdated: (updatedTransaction) {
+        onTransactionUpdated: () {
           _loadDashboardData();
         },
         onTransactionDeleted: () {

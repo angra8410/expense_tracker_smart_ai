@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
+import '../models/transaction.dart';
 import '../services/budget_service.dart';
+import '../services/budget_notification_service.dart';
 import '../services/category_service.dart';
 import '../services/settings_service.dart';
+import '../services/web_storage_service.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/category_localization.dart';
 
@@ -28,13 +31,29 @@ class _BudgetScreenState extends State<BudgetScreen> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    // Register for budget update notifications
+    BudgetNotificationService.addBudgetUpdateListener(_onBudgetUpdateNotification);
+    
     _loadData();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    
+    // Unregister from budget update notifications
+    BudgetNotificationService.removeBudgetUpdateListener(_onBudgetUpdateNotification);
+    
     super.dispose();
+  }
+
+  /// Called when transactions change and budgets need to be refreshed
+  void _onBudgetUpdateNotification() {
+    if (mounted) {
+      print('🔄 Budget screen received update notification, refreshing data...');
+      _loadData();
+    }
   }
 
   @override
@@ -52,6 +71,7 @@ class _BudgetScreenState extends State<BudgetScreen> with WidgetsBindingObserver
 
   Future<void> _loadData() async {
     try {
+      print('🔄 _loadData called at ${DateTime.now()}');
       setState(() => _isLoading = true);
       
       final budgets = await BudgetService.getActiveBudgets();
@@ -65,17 +85,20 @@ class _BudgetScreenState extends State<BudgetScreen> with WidgetsBindingObserver
         budgetProgress.add(progress);
       }
       
-      setState(() {
-        _budgets = budgets;
-        _recommendations = recommendations;
-        _categories = categories;
-        _budgetProgress = budgetProgress;
-        _isLoading = false;
-        _lastRefresh = DateTime.now();
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() {
+          _budgets = budgets;
+          _recommendations = recommendations;
+          _categories = categories;
+          _budgetProgress = budgetProgress;
+          _isLoading = false;
+          _lastRefresh = DateTime.now();
+        });
+        print('✅ Budget data refreshed successfully. Total spent across all budgets: ${budgetProgress.fold(0.0, (sum, p) => sum + p.spent)}');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context)!.errorLoadingData)),
         );
@@ -127,7 +150,7 @@ class _BudgetScreenState extends State<BudgetScreen> with WidgetsBindingObserver
   Widget _buildBudgetOverview(AppLocalizations l10n) {
     final totalBudget = _budgetProgress.fold<double>(
       0.0, 
-      (sum, progress) => sum + progress.budget.amount,
+      (sum, progress) => sum + progress.budget.totalBudgetAmount,
     );
     final totalSpent = _budgetProgress.fold<double>(
       0.0, 
@@ -273,6 +296,7 @@ class _BudgetScreenState extends State<BudgetScreen> with WidgetsBindingObserver
 
   Widget _buildBudgetCard(BudgetProgress progress, AppLocalizations l10n) {
     final budget = progress.budget;
+    
     final category = _categories.firstWhere(
       (c) => c.id == budget.categoryId,
       orElse: () => Category(
@@ -301,7 +325,7 @@ class _BudgetScreenState extends State<BudgetScreen> with WidgetsBindingObserver
     }
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -706,6 +730,7 @@ class _CreateBudgetDialogState extends State<_CreateBudgetDialog> {
   String? _selectedCategoryId;
   BudgetPeriod _selectedPeriod = BudgetPeriod.monthly;
   bool _rolloverEnabled = false;
+  bool _includeHistoricalData = true;
   List<Category> _categories = [];
   bool _isLoading = false;
 
@@ -824,6 +849,55 @@ class _CreateBudgetDialogState extends State<_CreateBudgetDialog> {
               ),
               const SizedBox(height: 16),
               
+              // Include Historical Data Toggle
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          _includeHistoricalData ? Icons.history : Icons.today,
+                          color: _includeHistoricalData ? Colors.blue : Colors.grey,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Include existing transactions',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        Switch(
+                          value: _includeHistoricalData,
+                          onChanged: (value) {
+                            setState(() {
+                              _includeHistoricalData = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _includeHistoricalData 
+                        ? 'Budget will include transactions added before budget creation'
+                        : 'Budget will only track transactions from today forward',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              
               // Rollover Toggle
               Container(
                 decoration: BoxDecoration(
@@ -909,9 +983,46 @@ class _CreateBudgetDialogState extends State<_CreateBudgetDialog> {
     setState(() => _isLoading = true);
 
     try {
-      // Start the budget at the beginning of the current day
-      final now = DateTime.now();
-      final startOfDay = DateTime(now.year, now.month, now.day);
+      DateTime startDate;
+      
+      if (_includeHistoricalData && _selectedCategoryId != null) {
+        // Get existing transactions for this category to determine appropriate start date
+        final transactions = await WebStorageService.getTransactions();
+        final categoryTransactions = transactions.where((t) => 
+          t.categoryId == _selectedCategoryId && t.type == TransactionType.expense
+        ).toList();
+        
+        if (categoryTransactions.isNotEmpty) {
+          // Sort transactions by date and get the earliest one
+          categoryTransactions.sort((a, b) => a.date.compareTo(b.date));
+          final earliestDate = categoryTransactions.first.date;
+          
+          // Start from the beginning of the period that contains the earliest transaction
+          switch (_selectedPeriod) {
+            case BudgetPeriod.weekly:
+              // Start from the beginning of the week containing the earliest transaction
+              final daysFromMonday = earliestDate.weekday - 1;
+              startDate = DateTime(earliestDate.year, earliestDate.month, earliestDate.day - daysFromMonday);
+              break;
+            case BudgetPeriod.monthly:
+              // Start from the beginning of the month containing the earliest transaction
+              startDate = DateTime(earliestDate.year, earliestDate.month, 1);
+              break;
+            case BudgetPeriod.yearly:
+              // Start from the beginning of the year containing the earliest transaction
+              startDate = DateTime(earliestDate.year, 1, 1);
+              break;
+          }
+        } else {
+          // No existing transactions, start from today
+          final now = DateTime.now();
+          startDate = DateTime(now.year, now.month, now.day);
+        }
+      } else {
+        // Start from the beginning of the current day
+        final now = DateTime.now();
+        startDate = DateTime(now.year, now.month, now.day);
+      }
       
       final budget = Budget(
         id: 'budget_${DateTime.now().millisecondsSinceEpoch}',
@@ -919,8 +1030,8 @@ class _CreateBudgetDialogState extends State<_CreateBudgetDialog> {
         amount: double.parse(_amountController.text),
         categoryId: _selectedCategoryId!,
         period: _selectedPeriod,
-        startDate: startOfDay,
-        endDate: _calculateEndDate(startOfDay, _selectedPeriod),
+        startDate: startDate,
+        endDate: _calculateEndDate(startDate, _selectedPeriod),
         isActive: true,
         rolloverEnabled: _rolloverEnabled,
         rolloverAmount: 0.0,

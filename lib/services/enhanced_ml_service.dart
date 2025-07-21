@@ -1,28 +1,10 @@
-import 'dart:async';
 import 'dart:math';
 import '../models/transaction.dart';
-import '../models/category.dart';
 import '../models/ml_models.dart';
-import '../models/ml_prediction_models.dart';
-import 'ml_engine.dart';
-import 'smart_ml_service.dart';
-import 'web_storage_service.dart';
-
-class CategoryPredictionResult {
-  final String categoryId;
-  final double confidence;
-
-  CategoryPredictionResult({
-    required this.categoryId,
-    required this.confidence,
-  });
-}
+import '../services/web_storage_service.dart';
+import '../services/ml_engine.dart';
 
 class EnhancedMLService {
-  static Timer? _mlTimer;
-  static DateTime? _lastMLAnalysis;
-
-  // Storage keys
   static const String _anomalyAlertsKey = 'anomaly_alerts';
   static const String _cashflowForecastKey = 'cashflow_forecast';
   static const String _personalizedAdviceKey = 'personalized_advice';
@@ -30,381 +12,262 @@ class EnhancedMLService {
   static const String _anomalyThresholdsKey = 'anomaly_thresholds';
   static const String _predictionAccuracyKey = 'prediction_accuracy';
 
-  static Future<void> initialize() async {
-    _startPeriodicMLAnalysis();
-  }
-
-  static void dispose() {
-    _mlTimer?.cancel();
-  }
-
-  /// Smart Category Prediction for new transactions
-  static Future<String> predictCategoryForTransaction(
-    String description,
-    double amount,
-  ) async {
-    return await MLEngine.predictCategory(description, amount);
-  }
-
-  static Future<CategoryPredictionResult> predictCategoryWithConfidence(
-    String description,
-    double amount,
-  ) async {
+  // Auto-categorization with ML
+  static Future<String> autoCategorizeTransaction(String description, double amount) async {
     try {
-      final categoryId = await MLEngine.predictCategory(description, amount);
-      
-      // Calculate confidence based on pattern matching
-      final patterns = await _loadUserPatterns();
-      final tokens = description.toLowerCase().split(' ');
-      
-      double confidence = 0.5; // Base confidence
-      
-      final matchingPattern = patterns.firstWhere(
-        (p) => p.categoryId == categoryId,
-        orElse: () => UserPattern(
-          categoryId: categoryId,
-          keywords: [],
-          averageAmount: 0.0,
-          transactionCount: 0,
-          confidence: 0.0,
-        ),
-      );
-      
-      if (matchingPattern.transactionCount > 0) {
-        // Text similarity boost
-        final commonKeywords = tokens.where((token) => 
-            matchingPattern.keywords.contains(token)).length;
-        confidence += (commonKeywords / tokens.length) * 0.3;
-        
-        // Amount similarity boost
-        final amountDiff = (amount - matchingPattern.averageAmount).abs();
-        final amountSimilarity = 1.0 - (amountDiff / (matchingPattern.averageAmount + amount));
-        confidence += amountSimilarity * 0.2;
-        
-        // Pattern confidence boost
-        confidence += matchingPattern.confidence * 0.1;
-      }
-      
-      return CategoryPredictionResult(
-        categoryId: categoryId,
-        confidence: min(1.0, confidence),
-      );
+      return await MLEngine.predictCategory(description, amount);
     } catch (e) {
-      print('Error predicting category with confidence: $e');
-      return CategoryPredictionResult(
-        categoryId: 'general',
-        confidence: 0.1,
-      );
+      print('Error in auto-categorization: $e');
+      return 'other';
     }
   }
 
-  /// Get smart description suggestions
-  static Future<List<String>> getDescriptionSuggestions(
-    String categoryId,
-    double amount,
-  ) async {
+  // Periodic ML analysis
+  static Future<void> performPeriodicAnalysis() async {
     try {
       final transactions = await WebStorageService.getTransactions();
-      final categoryTransactions = transactions
-          .where((t) => t.categoryId == categoryId)
-          .toList();
       
-      if (categoryTransactions.isEmpty) return [];
-      
-      // Get most common descriptions for this category
-      final descriptionFrequency = <String, int>{};
-      for (var transaction in categoryTransactions) {
-        final description = transaction.description.toLowerCase().trim();
-        if (description.isNotEmpty) {
-          descriptionFrequency[description] = 
-              (descriptionFrequency[description] ?? 0) + 1;
-        }
-      }
-      
-      // Sort by frequency and return top suggestions
-      final sortedDescriptions = descriptionFrequency.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
-      
-      return sortedDescriptions
-          .take(5)
-          .map((entry) => entry.key)
-          .toList();
+      if (transactions.isEmpty) return;
+
+      // Anomaly detection
+      final anomalies = await MLEngine.detectAnomalies(transactions);
+      await _saveAnomalyAlerts(anomalies);
+
+      // Cashflow forecasting
+      final forecast = await MLEngine.generateCashflowForecast(transactions);
+      await _saveCashflowForecast(forecast);
+
+      // Personalized advice
+      final advice = await MLEngine.generatePersonalizedAdvice(transactions);
+      await _savePersonalizedAdvice(advice);
+
     } catch (e) {
-      print('Error getting description suggestions: $e');
-      return [];
+      print('Error in periodic ML analysis: $e');
     }
   }
 
-  /// Get smart amount suggestions
-  static Future<List<double>> getSuggestedAmounts(
-    String categoryId,
-    String description,
-  ) async {
+  // Learn from user transaction
+  static Future<void> learnFromUserTransaction(Transaction transaction) async {
     try {
-      final transactions = await WebStorageService.getTransactions();
-      final categoryTransactions = transactions
-          .where((t) => t.categoryId == categoryId)
-          .toList();
-      
-      if (categoryTransactions.isEmpty) return [];
-      
-      // Filter by similar descriptions if provided
-      List<Transaction> relevantTransactions = categoryTransactions;
-      if (description.isNotEmpty) {
-        final descriptionTokens = description.toLowerCase().split(' ');
-        relevantTransactions = categoryTransactions.where((t) {
-          final transactionTokens = t.description.toLowerCase().split(' ');
-          final commonTokens = descriptionTokens.where((token) => 
-              transactionTokens.contains(token)).length;
-          return commonTokens > 0;
-        }).toList();
-        
-        // Fall back to all category transactions if no matches
-        if (relevantTransactions.isEmpty) {
-          relevantTransactions = categoryTransactions;
-        }
-      }
-      
-      final amounts = relevantTransactions.map((t) => t.amount).toList();
-      amounts.sort();
-      
-      // Return common amounts (mode, median, recent average)
-      final suggestions = <double>{};
-      
-      // Add median
-      if (amounts.isNotEmpty) {
-        final median = amounts[amounts.length ~/ 2];
-        suggestions.add(median);
-      }
-      
-      // Add recent average (last 10 transactions)
-      final recentTransactions = relevantTransactions
-          .take(10)
-          .map((t) => t.amount)
-          .toList();
-      
-      if (recentTransactions.isNotEmpty) {
-        final recentAverage = recentTransactions.reduce((a, b) => a + b) / recentTransactions.length;
-        suggestions.add(recentAverage);
-      }
-      
-      return suggestions.toList()..sort();
+      await MLEngine.learnFromTransaction(transaction);
     } catch (e) {
-      print('Error getting amount suggestions: $e');
-      return [];
+      print('Error learning from transaction: $e');
     }
   }
 
-  /// Detect amount anomaly
-  static Future<bool> detectAmountAnomaly(
-    String categoryId,
-    double amount,
-  ) async {
+  // Check if transaction is anomalous
+  static Future<bool> isAnomalousTransaction(Transaction transaction) async {
     try {
       final transactions = await WebStorageService.getTransactions();
-      final categoryTransactions = transactions
-          .where((t) => t.categoryId == categoryId)
-          .toList();
+      final categoryTransactions = transactions.where((t) => t.categoryId == transaction.categoryId).toList();
       
       if (categoryTransactions.length < 3) return false;
       
       final amounts = categoryTransactions.map((t) => t.amount).toList();
-      final average = amounts.reduce((a, b) => a + b) / amounts.length;
-      final variance = amounts.map((a) => pow(a - average, 2)).reduce((a, b) => a + b) / amounts.length;
-      final standardDeviation = sqrt(variance);
+      final mean = amounts.reduce((a, b) => a + b) / amounts.length;
+      final variance = amounts.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) / amounts.length;
+      final stdDev = sqrt(variance);
       
-      // Consider anomaly if amount is more than 2 standard deviations from mean
-      return (amount - average).abs() > (2 * standardDeviation);
+      final zScore = (transaction.amount - mean) / stdDev;
+      return zScore.abs() > 2.0;
     } catch (e) {
-      print('Error detecting amount anomaly: $e');
+      print('Error checking anomalous transaction: $e');
       return false;
     }
   }
 
-  /// Learn from user transaction
-  static Future<void> learnFromUserTransaction(Transaction transaction) async {
+  // Get category prediction confidence
+  static Future<double> getCategoryPredictionConfidence(String description, String predictedCategory) async {
     try {
-      await MLEngine.learnFromTransaction(transaction);
-      await _updateUserPatterns(transaction);
+      // Simple confidence calculation based on keyword matching
+      final descriptionLower = description.toLowerCase();
+      final categoryKeywords = {
+        'food': ['restaurant', 'food', 'grocery', 'cafe', 'pizza', 'burger', 'coffee'],
+        'transport': ['gas', 'fuel', 'uber', 'taxi', 'bus', 'train', 'parking'],
+        'shopping': ['store', 'shop', 'mall', 'amazon', 'purchase', 'buy'],
+        'entertainment': ['movie', 'cinema', 'game', 'music', 'concert', 'theater'],
+        'utilities': ['electric', 'water', 'gas', 'internet', 'phone', 'utility'],
+        'healthcare': ['doctor', 'hospital', 'pharmacy', 'medical', 'health'],
+      };
+
+      final keywords = categoryKeywords[predictedCategory] ?? [];
+      int matches = 0;
+      for (var keyword in keywords) {
+        if (descriptionLower.contains(keyword)) matches++;
+      }
+      
+      return matches > 0 ? min(1.0, matches / 3.0) : 0.1;
     } catch (e) {
-      print('Error learning from user transaction: $e');
+      print('Error getting prediction confidence: $e');
+      return 0.1;
     }
   }
 
-  /// Get anomaly alerts
+  // Generate transaction insights
+  static Future<List<String>> generateTransactionInsights(Transaction transaction) async {
+    try {
+      final insights = <String>[];
+      final transactions = await WebStorageService.getTransactions();
+      
+      // Compare with similar transactions
+      final similarTransactions = transactions.where((t) => 
+        t.categoryId == transaction.categoryId && 
+        t.id != transaction.id
+      ).toList();
+
+      if (similarTransactions.isNotEmpty) {
+        final avgAmount = similarTransactions.map((t) => t.amount).reduce((a, b) => a + b) / similarTransactions.length;
+        
+        if (transaction.amount > avgAmount * 1.5) {
+          insights.add('This transaction is significantly higher than your usual ${transaction.categoryId} spending');
+        } else if (transaction.amount < avgAmount * 0.5) {
+          insights.add('This is a relatively small ${transaction.categoryId} expense for you');
+        }
+      }
+
+      // Time-based insights
+      final hour = transaction.date.hour;
+      if (hour < 6) {
+        insights.add('Late night transaction - consider if this was necessary');
+      } else if (hour > 22) {
+        insights.add('Evening transaction - review your spending patterns');
+      }
+
+      return insights;
+    } catch (e) {
+      print('Error generating transaction insights: $e');
+      return [];
+    }
+  }
+
+  // Predict next period spending
+  static Future<Map<String, double>> predictNextPeriodSpending() async {
+    try {
+      final transactions = await WebStorageService.getTransactions();
+      final now = DateTime.now();
+      final lastMonth = transactions.where((t) => 
+        now.difference(t.date).inDays <= 30 && 
+        t.type == TransactionType.expense
+      ).toList();
+
+      final categorySpending = <String, double>{};
+      for (var transaction in lastMonth) {
+        categorySpending[transaction.categoryId] = 
+            (categorySpending[transaction.categoryId] ?? 0) + transaction.amount;
+      }
+
+      // Simple prediction: assume similar spending pattern
+      return categorySpending.map((key, value) => MapEntry(key, value * 1.05)); // 5% increase
+    } catch (e) {
+      print('Error predicting next period spending: $e');
+      return {};
+    }
+  }
+
+  // Generate budget recommendations
+  static Future<Map<String, double>> generateBudgetRecommendations() async {
+    try {
+      final transactions = await WebStorageService.getTransactions();
+      final now = DateTime.now();
+      final lastThreeMonths = transactions.where((t) => 
+        now.difference(t.date).inDays <= 90 && 
+        t.type == TransactionType.expense
+      ).toList();
+
+      final categorySpending = <String, double>{};
+      for (var transaction in lastThreeMonths) {
+        categorySpending[transaction.categoryId] = 
+            (categorySpending[transaction.categoryId] ?? 0) + transaction.amount;
+      }
+
+      // Recommend 10% reduction in highest spending categories
+      return categorySpending.map((key, value) => 
+        MapEntry(key, (value / 3) * 0.9) // Monthly average with 10% reduction
+      );
+    } catch (e) {
+      print('Error generating budget recommendations: $e');
+      return {};
+    }
+  }
+
+  // Calculate financial health score
+  static Future<double> calculateFinancialHealthScore() async {
+    try {
+      final transactions = await WebStorageService.getTransactions();
+      final now = DateTime.now();
+      final lastMonth = transactions.where((t) => 
+        now.difference(t.date).inDays <= 30
+      ).toList();
+
+      final income = lastMonth.where((t) => t.type == TransactionType.income)
+          .fold(0.0, (sum, t) => sum + t.amount);
+      final expenses = lastMonth.where((t) => t.type == TransactionType.expense)
+          .fold(0.0, (sum, t) => sum + t.amount);
+
+      if (income <= 0) return 0.0;
+
+      final savingsRate = (income - expenses) / income;
+      return (savingsRate * 100).clamp(0.0, 100.0);
+    } catch (e) {
+      print('Error calculating financial health score: $e');
+      return 0.0;
+    }
+  }
+
+  // Generate category insights
+  static Future<Map<String, dynamic>> generateCategoryInsights() async {
+    try {
+      final transactions = await WebStorageService.getTransactions();
+      final now = DateTime.now();
+      final lastMonth = transactions.where((t) => 
+        now.difference(t.date).inDays <= 30 && 
+        t.type == TransactionType.expense
+      ).toList();
+
+      final categoryData = <String, Map<String, dynamic>>{};
+      
+      for (var transaction in lastMonth) {
+        if (!categoryData.containsKey(transaction.categoryId)) {
+          categoryData[transaction.categoryId] = {
+            'total': 0.0,
+            'count': 0,
+            'average': 0.0,
+          };
+        }
+        
+        categoryData[transaction.categoryId]!['total'] = 
+            (categoryData[transaction.categoryId]!['total'] as double) + transaction.amount;
+        categoryData[transaction.categoryId]!['count'] = 
+            (categoryData[transaction.categoryId]!['count'] as int) + 1;
+      }
+
+      // Calculate averages
+      for (var entry in categoryData.entries) {
+        final total = entry.value['total'] as double;
+        final count = entry.value['count'] as int;
+        entry.value['average'] = count > 0 ? total / count : 0.0;
+      }
+
+      return categoryData;
+    } catch (e) {
+      print('Error generating category insights: $e');
+      return {};
+    }
+  }
+
+  // Data persistence methods
   static Future<List<AnomalyAlert>> getAnomalyAlerts() async {
-    try {
-      await _ensureRecentAnalysis();
-      return await _loadAnomalyAlerts();
-    } catch (e) {
-      print('Error getting anomaly alerts: $e');
-      return [];
-    }
-  }
-
-  /// Get cashflow forecast
-  static Future<List<CashflowForecast>> getCashflowForecast() async {
-    try {
-      await _ensureRecentAnalysis();
-      return await _loadCashflowForecast();
-    } catch (e) {
-      print('Error getting cashflow forecast: $e');
-      return [];
-    }
-  }
-
-  /// Get personalized advice
-  static Future<List<PersonalizedAdvice>> getPersonalizedAdvice() async {
-    try {
-      await _ensureRecentAnalysis();
-      return await _loadPersonalizedAdvice();
-    } catch (e) {
-      print('Error getting personalized advice: $e');
-      return [];
-    }
-  }
-
-  /// Get spending insights
-  static Future<Map<String, dynamic>> getSpendingInsights() async {
-    try {
-      final transactions = await WebStorageService.getTransactions();
-      if (transactions.isEmpty) return {};
-
-      final now = DateTime.now();
-      final thisMonth = transactions.where((t) => 
-        t.date.year == now.year && t.date.month == now.month).toList();
-      
-      final lastMonth = transactions.where((t) {
-        final lastMonthDate = DateTime(now.year, now.month - 1);
-        return t.date.year == lastMonthDate.year && t.date.month == lastMonthDate.month;
-      }).toList();
-
-      final thisMonthTotal = thisMonth.fold(0.0, (sum, t) => sum + t.amount);
-      final lastMonthTotal = lastMonth.fold(0.0, (sum, t) => sum + t.amount);
-      
-      final changePercent = lastMonthTotal > 0 
-          ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100
-          : 0.0;
-
-      return {
-        'this_month_total': thisMonthTotal,
-        'last_month_total': lastMonthTotal,
-        'change_percent': changePercent,
-        'transaction_count': thisMonth.length,
-        'average_transaction': thisMonth.isNotEmpty ? thisMonthTotal / thisMonth.length : 0.0,
-      };
-    } catch (e) {
-      print('Error getting spending insights: $e');
-      return {};
-    }
-  }
-
-  /// Get category insights
-  static Future<Map<String, dynamic>> getCategoryInsights(String categoryId) async {
-    try {
-      final transactions = await WebStorageService.getTransactions();
-      final categoryTransactions = transactions
-          .where((t) => t.categoryId == categoryId)
-          .toList();
-      
-      if (categoryTransactions.isEmpty) return {};
-
-      final amounts = categoryTransactions.map((t) => t.amount).toList();
-      amounts.sort();
-      
-      final total = amounts.reduce((a, b) => a + b);
-      final average = total / amounts.length;
-      final median = amounts[amounts.length ~/ 2];
-      
-      // Calculate trend (last 30 days vs previous 30 days)
-      final now = DateTime.now();
-      final last30Days = categoryTransactions.where((t) => 
-        now.difference(t.date).inDays <= 30).toList();
-      final previous30Days = categoryTransactions.where((t) {
-        final daysDiff = now.difference(t.date).inDays;
-        return daysDiff > 30 && daysDiff <= 60;
-      }).toList();
-      
-      final last30Total = last30Days.fold(0.0, (sum, t) => sum + t.amount);
-      final previous30Total = previous30Days.fold(0.0, (sum, t) => sum + t.amount);
-      
-      final trend = previous30Total > 0 
-          ? ((last30Total - previous30Total) / previous30Total) * 100
-          : 0.0;
-
-      return {
-        'total_spent': total,
-        'average_amount': average,
-        'median_amount': median,
-        'transaction_count': categoryTransactions.length,
-        'trend_percent': trend,
-        'last_30_days_total': last30Total,
-        'min_amount': amounts.first,
-        'max_amount': amounts.last,
-      };
-    } catch (e) {
-      print('Error getting category insights: $e');
-      return {};
-    }
-  }
-
-  /// Auto-categorize transaction
-  static Future<String> autoCategorizTransaction(
-    String description,
-    double amount,
-  ) async {
-    try {
-      return await MLEngine.predictCategory(description, amount);
-    } catch (e) {
-      print('Error auto-categorizing transaction: $e');
-      return 'general';
-    }
-  }
-
-  // Private helper methods
-  static void _startPeriodicMLAnalysis() {
-    _mlTimer = Timer.periodic(const Duration(hours: 6), (timer) {
-      _performPeriodicAnalysis();
-    });
-  }
-
-  static Future<void> _ensureRecentAnalysis() async {
-    if (_lastMLAnalysis == null || 
-        DateTime.now().difference(_lastMLAnalysis!).inHours > 6) {
-      await _performPeriodicAnalysis();
-    }
-  }
-
-  static Future<void> _performPeriodicAnalysis() async {
-    try {
-      final transactions = await WebStorageService.getTransactions();
-      if (transactions.length < 10) return; // Need minimum data
-      
-      // Run anomaly detection
-      final anomalies = await MLEngine.detectAnomalies(transactions);
-      await _saveAnomalyAlerts(anomalies);
-      
-      // Generate cashflow forecast
-      final forecast = await MLEngine.generateCashflowForecast(transactions);
-      await _saveCashflowForecast([forecast]);
-      
-      // Generate personalized advice
-      final advice = await MLEngine.generatePersonalizedAdvice(transactions);
-      await _savePersonalizedAdvice(advice);
-      
-      _lastMLAnalysis = DateTime.now();
-    } catch (e) {
-      print('Error performing periodic ML analysis: $e');
-    }
-  }
-
-  static Future<List<AnomalyAlert>> _loadAnomalyAlerts() async {
     try {
       final data = await WebStorageService.getList(_anomalyAlertsKey);
       return data.map((item) => AnomalyAlert.fromJson(item)).toList();
     } catch (e) {
       return [];
     }
+  }
+
+  // Add missing loadAnomalyAlerts method
+  static Future<List<AnomalyAlert>> loadAnomalyAlerts() async {
+    return await getAnomalyAlerts();
   }
 
   static Future<void> _saveAnomalyAlerts(List<AnomalyAlert> alerts) async {
@@ -416,31 +279,35 @@ class EnhancedMLService {
     }
   }
 
-  static Future<List<CashflowForecast>> _loadCashflowForecast() async {
+  static Future<CashflowForecast?> getCashflowForecast() async {
     try {
-      final data = await WebStorageService.getList(_cashflowForecastKey);
-      return data.map((item) => CashflowForecast.fromJson(item)).toList();
+      final data = await WebStorageService.getMap(_cashflowForecastKey);
+      return data != null ? CashflowForecast.fromJson(data) : null;
     } catch (e) {
-      return [];
+      return null;
     }
   }
 
-  static Future<void> _saveCashflowForecast(List<CashflowForecast> forecast) async {
+  static Future<void> _saveCashflowForecast(CashflowForecast forecast) async {
     try {
-      final data = forecast.map((item) => item.toJson()).toList();
-      await WebStorageService.saveList(_cashflowForecastKey, data);
+      await WebStorageService.saveMap(_cashflowForecastKey, forecast.toJson());
     } catch (e) {
       print('Error saving cashflow forecast: $e');
     }
   }
 
-  static Future<List<PersonalizedAdvice>> _loadPersonalizedAdvice() async {
+  static Future<List<PersonalizedAdvice>> getPersonalizedAdvice() async {
     try {
       final data = await WebStorageService.getList(_personalizedAdviceKey);
       return data.map((item) => PersonalizedAdvice.fromJson(item)).toList();
     } catch (e) {
       return [];
     }
+  }
+
+  // Add missing loadPersonalizedAdvice method
+  static Future<List<PersonalizedAdvice>> loadPersonalizedAdvice() async {
+    return await getPersonalizedAdvice();
   }
 
   static Future<void> _savePersonalizedAdvice(List<PersonalizedAdvice> advice) async {
@@ -452,7 +319,7 @@ class EnhancedMLService {
     }
   }
 
-  static Future<List<UserPattern>> _loadUserPatterns() async {
+  static Future<List<UserPattern>> getUserPatterns() async {
     try {
       final data = await WebStorageService.getList(_userPatternsKey);
       return data.map((item) => UserPattern.fromJson(item)).toList();
@@ -461,86 +328,46 @@ class EnhancedMLService {
     }
   }
 
-  static Future<Map<String, double>> _loadAnomalyThresholds() async {
+  static Future<void> saveUserPatterns(List<UserPattern> patterns) async {
+    try {
+      final data = patterns.map((pattern) => pattern.toJson()).toList();
+      await WebStorageService.saveList(_userPatternsKey, data);
+    } catch (e) {
+      print('Error saving user patterns: $e');
+    }
+  }
+
+  static Future<Map<String, double>> getAnomalyThresholds() async {
     try {
       final data = await WebStorageService.getMap(_anomalyThresholdsKey);
-      return data.map((key, value) => MapEntry(key, (value as num).toDouble()));
+      return data?.cast<String, double>() ?? {};
     } catch (e) {
       return {};
     }
   }
 
-  static Future<void> _updateUserPatterns(Transaction transaction) async {
+  static Future<void> saveAnomalyThresholds(Map<String, double> thresholds) async {
     try {
-      final patterns = await _loadUserPatterns();
-      final existingPattern = patterns.firstWhere(
-        (p) => p.categoryId == transaction.categoryId,
-        orElse: () => UserPattern(
-          categoryId: transaction.categoryId,
-          keywords: [],
-          averageAmount: 0.0,
-          transactionCount: 0,
-          confidence: 0.0,
-        ),
-      );
-
-      // Update pattern with new transaction data
-      final keywords = transaction.description.toLowerCase().split(' ');
-      final updatedKeywords = Set<String>.from(existingPattern.keywords)..addAll(keywords);
-      
-      final newCount = existingPattern.transactionCount + 1;
-      final newAverage = ((existingPattern.averageAmount * existingPattern.transactionCount) + transaction.amount) / newCount;
-      
-      final updatedPattern = UserPattern(
-        categoryId: transaction.categoryId,
-        keywords: updatedKeywords.toList(),
-        averageAmount: newAverage,
-        transactionCount: newCount,
-        confidence: min(1.0, newCount / 10.0), // Confidence increases with more data
-      );
-
-      // Update patterns list
-      final updatedPatterns = patterns.where((p) => p.categoryId != transaction.categoryId).toList();
-      updatedPatterns.add(updatedPattern);
-      
-      // Save updated patterns
-      final data = updatedPatterns.map((p) => p.toJson()).toList();
-      await WebStorageService.saveList(_userPatternsKey, data);
+      await WebStorageService.saveMap(_anomalyThresholdsKey, thresholds);
     } catch (e) {
-      print('Error updating user patterns: $e');
+      print('Error saving anomaly thresholds: $e');
     }
   }
 
-  static Future<double> _getCategoryPredictionAccuracy() async {
+  static Future<Map<String, double>> getPredictionAccuracy() async {
     try {
       final data = await WebStorageService.getMap(_predictionAccuracyKey);
-      return (data['accuracy'] as num?)?.toDouble() ?? 0.0;
+      return data?.cast<String, double>() ?? {};
     } catch (e) {
-      return 0.0;
+      return {};
     }
   }
 
-  /// Track prediction accuracy for ML improvement
-  static Future<void> trackPredictionAccuracy(
-    String predictedCategoryId,
-    String actualCategoryId,
-  ) async {
+  static Future<void> savePredictionAccuracy(Map<String, double> accuracy) async {
     try {
-      final data = await WebStorageService.getMap(_predictionAccuracyKey);
-      final totalPredictions = (data['total'] as int?) ?? 0;
-      final correctPredictions = (data['correct'] as int?) ?? 0;
-      
-      final newTotal = totalPredictions + 1;
-      final newCorrect = correctPredictions + (predictedCategoryId == actualCategoryId ? 1 : 0);
-      final newAccuracy = newCorrect / newTotal;
-      
-      await WebStorageService.saveMap(_predictionAccuracyKey, {
-        'total': newTotal,
-        'correct': newCorrect,
-        'accuracy': newAccuracy,
-      });
+      await WebStorageService.saveMap(_predictionAccuracyKey, accuracy);
     } catch (e) {
-      print('Error tracking prediction accuracy: $e');
+      print('Error saving prediction accuracy: $e');
     }
   }
 }
