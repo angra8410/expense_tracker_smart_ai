@@ -219,7 +219,10 @@ class _MainScreenState extends State<MainScreen> {
 
   List<Widget> get _screens {
     return [
-      HomeScreen(currency: widget.currency),
+      HomeScreen(
+        currency: widget.currency,
+        onNavigateToTab: _navigateToTab,
+      ),
       AddTransactionScreen(currency: widget.currency),
       const AnalyticsScreen(),
       BudgetScreen(currency: widget.currency),
