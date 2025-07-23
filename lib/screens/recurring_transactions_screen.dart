@@ -291,7 +291,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
               
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: rt.type == 'income' ? Colors.green : Colors.red,
+                  backgroundColor: rt.type == 'income' ? Colors.blue[600]! : Colors.orange[700]!,
                   child: Text(_getCategoryIcon(rt.categoryId)),
                 ),
                 title: Text(rt.description),
@@ -306,7 +306,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                       '\$${rt.amount.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: rt.type == 'income' ? Colors.green : Colors.red,
+                        color: rt.type == 'income' ? Colors.blue[600]! : Colors.orange[700]!,
                       ),
                     ),
                     Text(
@@ -331,7 +331,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: recurringTransaction.isActive
-              ? (recurringTransaction.type == 'income' ? Colors.green : Colors.red)
+              ? (recurringTransaction.type == 'income' ? Colors.blue[600]! : Colors.orange[700]!)
               : Colors.grey,
           child: Text(_getCategoryIcon(recurringTransaction.categoryId)),
         ),
@@ -372,7 +372,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: recurringTransaction.isActive
-                        ? (recurringTransaction.type == 'income' ? Colors.green : Colors.red)
+                        ? (recurringTransaction.type == 'income' ? Colors.blue[600]! : Colors.orange[700]!)
                         : Colors.grey,
                   ),
                 ),

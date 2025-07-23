@@ -69,7 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('⚙️ ${_getLocalizedText('settings')}'),
-        backgroundColor: isDark ? Colors.grey[900] : Colors.blue[700],
+        backgroundColor: isDark ? Colors.grey[900]! : Colors.blue[700]!,
         foregroundColor: Colors.white,
       ),
       backgroundColor: isDark ? Colors.grey[850] : Colors.grey[50],
@@ -401,7 +401,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: isSelected 
-                    ? (isDark ? Colors.blue[200] : Colors.blue[700])
+                    ? (isDark ? Colors.blue[200]! : Colors.blue[700]!)
                     : (isDark ? Colors.grey[300] : Colors.grey[700]),
               ),
               textAlign: TextAlign.center,
@@ -411,7 +411,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: TextStyle(
                 fontSize: 12,
                 color: isSelected 
-                    ? (isDark ? Colors.blue[300] : Colors.blue[600])
+                    ? (isDark ? Colors.blue[300]! : Colors.blue[600]!)
                     : (isDark ? Colors.grey[400] : Colors.grey[600]),
               ),
               textAlign: TextAlign.center,
@@ -481,7 +481,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ? '🇨🇴 Moneda cambiada a Peso Colombiano'
               : '🇺🇸 Currency changed to US Dollar',
         ),
-        backgroundColor: Colors.blue[600],
+        backgroundColor: Colors.blue[600]!,
       ),
     );
   }

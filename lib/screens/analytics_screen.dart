@@ -91,7 +91,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.analytics),
-        backgroundColor: Colors.blue[600],
+        backgroundColor: Colors.blue[600]!,
         foregroundColor: Colors.white,
         actions: [
           // Add refresh button

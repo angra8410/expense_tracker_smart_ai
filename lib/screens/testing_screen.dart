@@ -5,7 +5,6 @@ import '../services/enhanced_ml_service.dart';
 import '../services/category_service.dart';
 import '../services/export_service.dart';
 import '../utils/quick_test.dart';
-import '../utils/data_debug_helper.dart';
 import '../widgets/edit_transaction_dialog.dart';
 
 class TestingScreen extends StatefulWidget {
@@ -246,7 +245,7 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
     return Scaffold(
       appBar: AppBar(
         title: const Text('🔧 Debug & Testing'),
-        backgroundColor: Colors.blue[600],
+        backgroundColor: Colors.blue[600]!,
         foregroundColor: Colors.white,
         actions: [
           PopupMenuButton<String>(
@@ -332,7 +331,7 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
                           : const Icon(Icons.add_circle),
                         label: const Text('Test Add Transaction'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[600],
+                          backgroundColor: Colors.blue[600]!,
                           foregroundColor: Colors.white,
                         ),
                       ),
@@ -341,7 +340,7 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
                         icon: const Icon(Icons.storage),
                         label: const Text('Test Storage'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue[600],
+                          backgroundColor: Colors.blue[600]!,
                           foregroundColor: Colors.white,
                         ),
                       ),
@@ -359,7 +358,7 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
                         icon: const Icon(Icons.bug_report),
                         label: const Text('Debug Add Screen'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange[600],
+                          backgroundColor: Colors.orange[600]!,
                           foregroundColor: Colors.white,
                         ),
                       ),
@@ -391,7 +390,7 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
                         icon: const Icon(Icons.delete_forever),
                         label: const Text('Clear All Data'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[600],
+                          backgroundColor: Colors.red[700],
                           foregroundColor: Colors.white,
                         ),
                       ),
@@ -513,14 +512,14 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
                           leading: CircleAvatar(
                             backgroundColor: isDebugTest 
                               ? Colors.purple[100] 
-                              : (tx.type == TransactionType.income ? Colors.green[100] : Colors.red[100]),
+                              : (tx.type == TransactionType.income ? Colors.blue[100] : Colors.orange[100]),
                             child: Icon(
                               isDebugTest 
                                 ? Icons.bug_report 
                                 : (tx.type == TransactionType.income ? Icons.add : Icons.remove),
                               color: isDebugTest 
                                 ? Colors.purple[600] 
-                                : (tx.type == TransactionType.income ? Colors.green[600] : Colors.red[600]),
+                                : (tx.type == TransactionType.income ? Colors.blue[600]! : Colors.orange[700]!),
                               size: 20,
                             ),
                           ),
@@ -554,7 +553,7 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
                               Text(
                                 '${tx.type == TransactionType.income ? "+" : "-"}\$${tx.amount.abs().toStringAsFixed(2)}',
                                 style: TextStyle(
-                                  color: tx.type == TransactionType.income ? Colors.green : Colors.red,
+                                  color: tx.type == TransactionType.income ? Colors.blue[600]! : Colors.orange[700]!,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -642,7 +641,7 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Transactions exported as ${format.toUpperCase()} successfully!'),
-            backgroundColor: Colors.green,
+            backgroundColor: Colors.blue[600]!,
             action: SnackBarAction(
               label: 'OK',
               textColor: Colors.white,
@@ -660,7 +659,7 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export failed: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.red[700],
             action: SnackBarAction(
               label: 'OK',
               textColor: Colors.white,

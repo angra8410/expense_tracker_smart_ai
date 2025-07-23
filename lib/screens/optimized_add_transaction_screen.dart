@@ -45,8 +45,8 @@ Future<void> _saveTransaction() async {
                 : 'Income added successfully!',
           ),
           backgroundColor: _selectedType == TransactionType.expense
-              ? Colors.red[600] 
-              : Colors.green[600],
+              ? Colors.orange[700]! 
+              : Colors.blue[600]!,
         ),
       );
       Navigator.of(context).pop();
@@ -56,7 +56,7 @@ Future<void> _saveTransaction() async {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error saving transaction: $e'),
-          backgroundColor: Colors.red[600],
+          backgroundColor: Colors.red[700],
         ),
       );
     }

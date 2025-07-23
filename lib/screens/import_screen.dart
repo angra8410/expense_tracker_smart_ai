@@ -103,7 +103,7 @@ class _ImportScreenState extends State<ImportScreen> {
         SnackBar(
           content: Text(
               'Successfully imported ${_previewTransactions!.length} transactions'),
-          backgroundColor: Colors.green,
+          backgroundColor: Colors.blue[600]!,
         ),
       );
 
@@ -231,7 +231,7 @@ class _ImportScreenState extends State<ImportScreen> {
                             icon: const Icon(Icons.check),
                             label: const Text('Confirm Import'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: Colors.blue[600]!,
                               foregroundColor: Colors.white,
                             ),
                           ),
@@ -250,8 +250,8 @@ class _ImportScreenState extends State<ImportScreen> {
                                     ? Icons.arrow_upward
                                     : Icons.arrow_downward,
                                 color: transaction.type == TransactionType.income
-                                    ? Colors.green
-                                    : Colors.red,
+                                    ? Colors.blue[600]!
+                                    : Colors.orange[700]!,
                               ),
                               title: Text(transaction.description),
                               subtitle: Text(transaction.date.toString()),
@@ -259,8 +259,8 @@ class _ImportScreenState extends State<ImportScreen> {
                                 '${transaction.type == TransactionType.income ? '+' : '-'}\$${transaction.amount.toStringAsFixed(2)}',
                                 style: TextStyle(
                                   color: transaction.type == TransactionType.income
-                                      ? Colors.green
-                                      : Colors.red,
+                                      ? Colors.blue[600]!
+                                      : Colors.orange[700]!,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
