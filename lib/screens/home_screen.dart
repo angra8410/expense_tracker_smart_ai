@@ -8,6 +8,7 @@ import '../widgets/edit_transaction_dialog.dart';
 import '../screens/recurring_transactions_screen.dart';
 import '../screens/import_screen.dart';
 import '../screens/advanced_search_screen.dart';
+import '../screens/currency_converter_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int)? onNavigateToTab;
@@ -87,6 +88,8 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       case 'importStatementDesc': return isSpanish ? 'Importar archivo CSV del banco' : 'Import bank statement CSV file';
       case 'searchTransactions': return isSpanish ? 'Buscar Transacciones' : 'Search Transactions';
       case 'searchTransactionsDesc': return isSpanish ? 'Búsqueda avanzada y filtros' : 'Advanced search and filters';
+      case 'currencyConverter': return isSpanish ? 'Conversor de Moneda' : 'Currency Converter';
+      case 'currencyConverterDesc': return isSpanish ? 'Convertir entre monedas con tasas en vivo' : 'Convert between currencies with live rates';
       case 'home': return isSpanish ? 'Inicio' : 'Home';
       case 'recentTransactions': return isSpanish ? '📊 Transacciones Recientes' : '📊 Recent Transactions';
       case 'viewAll': return isSpanish ? 'Ver Todo' : 'View All';
@@ -398,6 +401,31 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                         ),
                       ),
                     ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      title: _getLocalizedText('currencyConverter'),
+                      description: _getLocalizedText('currencyConverterDesc'),
+                      icon: Icons.currency_exchange,
+                      color: Colors.amber[700]!,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CurrencyConverterScreen(),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(), // Empty space for symmetry
                   ),
                 ],
               ),
