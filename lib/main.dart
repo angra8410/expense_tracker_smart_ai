@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/add_transaction_screen.dart';
 import 'screens/analytics_screen.dart';
@@ -7,12 +8,24 @@ import 'screens/budget_screen.dart';
 import 'screens/intelligence_screen.dart';
 import 'screens/testing_screen.dart';
 import 'services/web_storage_service.dart';
+import 'services/theme_service.dart';
+import 'widgets/theme_toggle_widget.dart';
 import 'l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await WebStorageService.init();
-  runApp(const MyApp());
+  
+  // Initialize theme service
+  final themeService = ThemeService();
+  await themeService.initialize();
+  
+  runApp(
+    ChangeNotifierProvider<ThemeService>(
+      create: (_) => themeService,
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -23,15 +36,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.system;
   Locale _locale = const Locale('en');
   String _currency = 'USD';
-
-  void _changeTheme(ThemeMode themeMode) {
-    setState(() {
-      _themeMode = themeMode;
-    });
-  }
 
   void _changeLocale(Locale locale) {
     setState(() {
@@ -47,50 +53,42 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Smart Expense Tracker',
-      themeMode: _themeMode,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
-      locale: _locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('es'),
-      ],
-      home: MainScreen(
-        onThemeChanged: _changeTheme,
-        onLocaleChanged: _changeLocale,
-        onCurrencyChanged: _changeCurrency,
-        currency: _currency,
-      ),
+    return Consumer<ThemeService>(
+      builder: (context, themeService, child) {
+        return MaterialApp(
+          title: 'Smart Expense Tracker',
+          themeMode: themeService.themeMode,
+          theme: themeService.lightTheme,
+          darkTheme: themeService.darkTheme,
+          locale: _locale,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en'),
+            Locale('es'),
+          ],
+          home: MainScreen(
+            onLocaleChanged: _changeLocale,
+            onCurrencyChanged: _changeCurrency,
+            currency: _currency,
+          ),
+        );
+      },
     );
   }
 }
 
 class MainScreen extends StatefulWidget {
-  final Function(ThemeMode) onThemeChanged;
   final Function(Locale) onLocaleChanged;
   final Function(String) onCurrencyChanged;
   final String currency;
 
   const MainScreen({
     super.key,
-    required this.onThemeChanged,
     required this.onLocaleChanged,
     required this.onCurrencyChanged,
     required this.currency,
@@ -213,66 +211,15 @@ class _MainScreenState extends State<MainScreen> {
         ),
         const SizedBox(width: 8),
         
-        // Theme Toggle
-        PopupMenuButton<ThemeMode>(
-          onSelected: (themeMode) {
-            widget.onThemeChanged(themeMode);
-          },
-          itemBuilder: (context) => const [
-            PopupMenuItem(
-              value: ThemeMode.light,
-              child: Row(
-                children: [
-                  Icon(Icons.light_mode),
-                  SizedBox(width: 8),
-                  Text('Light'),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: ThemeMode.dark,
-              child: Row(
-                children: [
-                  Icon(Icons.dark_mode),
-                  SizedBox(width: 8),
-                  Text('Dark'),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: ThemeMode.system,
-              child: Row(
-                children: [
-                  Icon(Icons.auto_mode),
-                  SizedBox(width: 8),
-                  Text('System'),
-                ],
-              ),
-            ),
-          ],
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.palette, size: 16),
-                SizedBox(width: 4),
-                Icon(Icons.arrow_drop_down, size: 16),
-              ],
-            ),
-          ),
-        ),
+        // Theme Toggle Button
+        const ThemeToggleButton(),
       ],
     );
   }
 
   List<Widget> get _screens {
     return [
-      HomeScreen(currency: widget.currency, onNavigateToTab: _navigateToTab),
+      HomeScreen(currency: widget.currency),
       AddTransactionScreen(currency: widget.currency),
       const AnalyticsScreen(),
       BudgetScreen(currency: widget.currency),
@@ -284,6 +231,12 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('💰 Smart Expense Tracker'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        actions: [_buildAppBarActions()],
+      ),
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,

@@ -17,6 +17,7 @@ dependencies:
   intl: ^0.20.2
   fl_chart: ^0.68.0  # Add this for charts
   http: ^1.1.0       # Add this for API calls
+  provider: ^6.1.1   # Add this for state management
 
 dev_dependencies:
   flutter_test:
