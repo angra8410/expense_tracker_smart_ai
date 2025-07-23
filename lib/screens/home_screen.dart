@@ -7,6 +7,7 @@ import '../models/transaction.dart';
 import '../widgets/edit_transaction_dialog.dart';
 import '../screens/recurring_transactions_screen.dart';
 import '../screens/import_screen.dart';
+import '../screens/advanced_search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int)? onNavigateToTab;
@@ -84,6 +85,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       case 'recurringTransactionsDesc': return isSpanish ? 'Gestionar transacciones automáticas' : 'Manage automatic transactions';
       case 'importStatement': return isSpanish ? 'Importar Estado' : 'Import Statement';
       case 'importStatementDesc': return isSpanish ? 'Importar archivo CSV del banco' : 'Import bank statement CSV file';
+      case 'searchTransactions': return isSpanish ? 'Buscar Transacciones' : 'Search Transactions';
+      case 'searchTransactionsDesc': return isSpanish ? 'Búsqueda avanzada y filtros' : 'Advanced search and filters';
+      case 'home': return isSpanish ? 'Inicio' : 'Home';
       case 'recentTransactions': return isSpanish ? '📊 Transacciones Recientes' : '📊 Recent Transactions';
       case 'viewAll': return isSpanish ? 'Ver Todo' : 'View All';
       case 'noTransactions': return isSpanish ? 'No hay transacciones aún' : 'No transactions yet';
@@ -337,21 +341,31 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                 children: [
                   Expanded(
                     child: _buildQuickActionCard(
-                      title: _getLocalizedText('recurringTransactions'),
-                      description: _getLocalizedText('recurringTransactionsDesc'),
-                      icon: Icons.repeat,
-                      color: Colors.teal,
-                      onTap: () => _navigateToRecurringTransactions(),
+                      title: _getLocalizedText('searchTransactions'),
+                      description: _getLocalizedText('searchTransactionsDesc'),
+                      icon: Icons.search,
+                      color: Colors.green,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AdvancedSearchScreen(currency: widget.currency),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildQuickActionCard(
-                      title: 'AI Insights',
-                      description: _getLocalizedText('aiInsightsDesc'),
-                      icon: Icons.psychology,
-                      color: Colors.purple,
-                      onTap: () => _navigateToTab(4),
+                      title: _getLocalizedText('recurringTransactions'),
+                      description: _getLocalizedText('recurringTransactionsDesc'),
+                      icon: Icons.repeat,
+                      color: Colors.deepPurple,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RecurringTransactionsScreen(),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -521,6 +535,17 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
             ],
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AdvancedSearchScreen(currency: widget.currency),
+          ),
+        ),
+        backgroundColor: Colors.purple[600],
+        child: const Icon(Icons.search, color: Colors.white),
+        tooltip: _getLocalizedText('searchTransactions'),
       ),
     );
   }
