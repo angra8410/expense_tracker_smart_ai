@@ -7,7 +7,7 @@ class BankService {
   static const String _storageKey = 'banks';
 
   static Future<List<Bank>> getBanks() async {
-    final banksJson = await WebStorageService.getString(_storageKey) ?? '[]';
+    final banksJson = WebStorageService.getString(_storageKey) ?? '[]';
     final List<dynamic> banksList = WebStorageService.jsonDecode(banksJson);
     return banksList.map((json) => Bank.fromJson(json)).toList();
   }
@@ -112,6 +112,21 @@ class BankService {
         },
         dateFormat: 'MM/dd/yyyy',
         amountFormat: '#,##0.00',
+      ));
+
+      // Nu Bank Colombia format
+      await addBank(Bank(
+        id: _uuid.v4(),
+        name: 'Nu Bank Colombia',
+        description: 'Nu Bank Colombia statement format with columns: Fecha, Descripción, Monto (COP format with +/- prefix)',
+        csvFieldMapping: {
+          'description': 'descripción',
+          'amount': 'monto',
+          'date': 'fecha',
+        },
+        dateFormat: 'dd MMM',
+        amountFormat: '+/-\$#.###.###,##',
+        defaultAccountId: 'nu-colombia',
       ));
     }
   }

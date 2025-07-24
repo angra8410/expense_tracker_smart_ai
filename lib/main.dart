@@ -9,12 +9,16 @@ import 'screens/intelligence_screen.dart';
 import 'screens/testing_screen.dart';
 import 'services/web_storage_service.dart';
 import 'services/theme_service.dart';
+import 'services/app_initialization_service.dart';
 import 'widgets/theme_toggle_widget.dart';
 import 'l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await WebStorageService.init();
+  
+  // Initialize app services
+  await AppInitializationService.initialize();
   
   // Initialize theme service
   final themeService = ThemeService();

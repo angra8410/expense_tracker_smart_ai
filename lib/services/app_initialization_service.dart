@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import '../models/category.dart';
 import '../services/bank_service.dart';
+import '../services/country_bank_service.dart';
 
 class AppInitializationService {
   static Future<void> initialize() async {
     // Initialize default banks
     await BankService.initializeDefaultBanks();
+    
+    // Initialize country-based banks
+    await CountryBankService.initializeCountryBanks();
   }
 
   static Future<List<Category>> getCategories() async {
