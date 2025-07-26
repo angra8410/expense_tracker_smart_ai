@@ -5,6 +5,7 @@ import '../services/enhanced_ml_service.dart';
 import '../services/category_service.dart';
 import '../services/export_service.dart';
 import '../utils/quick_test.dart';
+import '../utils/data_debug_helper.dart';
 import '../widgets/edit_transaction_dialog.dart';
 
 class TestingScreen extends StatefulWidget {
@@ -41,6 +42,35 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
     setState(() {
       _transactionsFuture = WebStorageService.getTransactions(includeTestData: false);
     });
+  }
+
+  Future<void> _recreateTestData() async {
+    if (_isLoading) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+
+    _addDebugLog('🧪 Starting Test Data Recreation');
+    
+    try {
+      _addDebugLog('Calling DataDebugHelper.recreateTestData()...');
+      await DataDebugHelper.recreateTestData();
+      _addDebugLog('✅ Test data recreation completed successfully');
+      
+      _addDebugLog('Refreshing transactions list...');
+      _loadTransactions();
+      _addDebugLog('✅ Transactions list refreshed');
+      
+      _addDebugLog('🎉 Test Data Recreation COMPLETED');
+      _addDebugLog('📊 Analytics screen should now show data!');
+    } catch (e) {
+      _addDebugLog('❌ Test Data Recreation FAILED: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -359,6 +389,15 @@ class _TestingScreenState extends State<TestingScreen> with AutomaticKeepAliveCl
                         label: const Text('Debug Add Screen'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange[600]!,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _recreateTestData,
+                        icon: const Icon(Icons.data_object),
+                        label: const Text('Create Sample Data'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green[600],
                           foregroundColor: Colors.white,
                         ),
                       ),

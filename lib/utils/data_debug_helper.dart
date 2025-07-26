@@ -189,60 +189,196 @@ class DataDebugHelper {
     try {
       print('🔄 Recreating test data...');
       
-      // Create the 120,000 COP transaction that was missing
-      final transaction120k = Transaction(
-        id: 'tx_120k_${DateTime.now().millisecondsSinceEpoch}',
-        description: 'comida',
-        amount: 120000.0,
-        categoryId: 'food',
-        date: DateTime(2025, 7, 19, 7, 22, 7, 519), // Original date from debug
-        type: TransactionType.expense,
-        accountId: 'default_account',
-        createdAt: DateTime(2025, 7, 19, 7, 22, 7, 519),
-      );
+      final now = DateTime.now();
+      final currentMonth = DateTime(now.year, now.month, 1);
       
-      // Create the 100,000 COP transaction
-      final transaction100k = Transaction(
-        id: 'tx_100k_${DateTime.now().millisecondsSinceEpoch}',
-        description: 'comida',
-        amount: 100000.0,
-        categoryId: 'food',
-        date: DateTime(2025, 7, 19, 7, 35, 40, 819), // Original date from debug
-        type: TransactionType.expense,
-        accountId: 'default_account',
-        createdAt: DateTime(2025, 7, 19, 7, 35, 40, 819),
-      );
+      // Create diverse sample transactions for the current month
+      final sampleTransactions = [
+        // Income transactions
+        Transaction(
+          id: 'tx_salary_${now.millisecondsSinceEpoch}',
+          description: 'Monthly Salary',
+          amount: 3000000.0, // 3M COP
+          categoryId: 'salary',
+          date: DateTime(now.year, now.month, 1, 9, 0), // First day of month
+          type: TransactionType.income,
+          accountId: 'default_account',
+          createdAt: now,
+        ),
+        Transaction(
+          id: 'tx_freelance_${now.millisecondsSinceEpoch + 1}',
+          description: 'Freelance Project',
+          amount: 800000.0, // 800K COP
+          categoryId: 'other_income',
+          date: DateTime(now.year, now.month, 15, 14, 30), // Mid month
+          type: TransactionType.income,
+          accountId: 'default_account',
+          createdAt: now,
+        ),
+        
+        // Food expenses
+        Transaction(
+          id: 'tx_food1_${now.millisecondsSinceEpoch + 2}',
+          description: 'Grocery Shopping',
+          amount: 120000.0,
+          categoryId: 'food',
+          date: DateTime(now.year, now.month, 3, 10, 30),
+          type: TransactionType.expense,
+          accountId: 'default_account',
+          createdAt: now,
+        ),
+        Transaction(
+          id: 'tx_food2_${now.millisecondsSinceEpoch + 3}',
+          description: 'Restaurant Dinner',
+          amount: 85000.0,
+          categoryId: 'food',
+          date: DateTime(now.year, now.month, 7, 19, 45),
+          type: TransactionType.expense,
+          accountId: 'default_account',
+          createdAt: now,
+        ),
+        Transaction(
+          id: 'tx_food3_${now.millisecondsSinceEpoch + 4}',
+          description: 'Coffee Shop',
+          amount: 25000.0,
+          categoryId: 'food',
+          date: DateTime(now.year, now.month, 12, 8, 15),
+          type: TransactionType.expense,
+          accountId: 'default_account',
+          createdAt: now,
+        ),
+        
+        // Transportation
+        Transaction(
+          id: 'tx_transport1_${now.millisecondsSinceEpoch + 5}',
+          description: 'Gas Station',
+          amount: 150000.0,
+          categoryId: 'transportation',
+          date: DateTime(now.year, now.month, 5, 16, 20),
+          type: TransactionType.expense,
+          accountId: 'default_account',
+          createdAt: now,
+        ),
+        Transaction(
+          id: 'tx_transport2_${now.millisecondsSinceEpoch + 6}',
+          description: 'Uber Rides',
+          amount: 45000.0,
+          categoryId: 'transportation',
+          date: DateTime(now.year, now.month, 10, 22, 30),
+          type: TransactionType.expense,
+          accountId: 'default_account',
+          createdAt: now,
+        ),
+        
+        // Entertainment
+        Transaction(
+          id: 'tx_entertainment1_${now.millisecondsSinceEpoch + 7}',
+          description: 'Movie Theater',
+          amount: 35000.0,
+          categoryId: 'entertainment',
+          date: DateTime(now.year, now.month, 8, 20, 0),
+          type: TransactionType.expense,
+          accountId: 'default_account',
+          createdAt: now,
+        ),
+        Transaction(
+          id: 'tx_entertainment2_${now.millisecondsSinceEpoch + 8}',
+          description: 'Streaming Services',
+          amount: 50000.0,
+          categoryId: 'entertainment',
+          date: DateTime(now.year, now.month, 1, 12, 0),
+          type: TransactionType.expense,
+          accountId: 'default_account',
+          createdAt: now,
+        ),
+        
+        // Shopping
+        Transaction(
+          id: 'tx_shopping1_${now.millisecondsSinceEpoch + 9}',
+          description: 'Clothing Store',
+          amount: 200000.0,
+          categoryId: 'shopping',
+          date: DateTime(now.year, now.month, 14, 15, 30),
+          type: TransactionType.expense,
+          accountId: 'default_account',
+          createdAt: now,
+        ),
+        
+        // Health
+        Transaction(
+          id: 'tx_health1_${now.millisecondsSinceEpoch + 10}',
+          description: 'Pharmacy',
+          amount: 75000.0,
+          categoryId: 'health',
+          date: DateTime(now.year, now.month, 6, 11, 45),
+          type: TransactionType.expense,
+          accountId: 'default_account',
+          createdAt: now,
+        ),
+      ];
       
-      // Save transactions
-      final transactions = [transaction120k, transaction100k];
-      await WebStorageService.saveTransactions(transactions);
-      print('✅ Created ${transactions.length} transactions');
+      // Clear existing transactions and save new ones
+      await WebStorageService.saveTransactions(sampleTransactions);
+      print('✅ Created ${sampleTransactions.length} sample transactions');
       
-      // Create budget with start date at beginning of day
-      final budgetStartDate = DateTime(2025, 7, 19); // Start of day
-      final budgetEndDate = DateTime(2025, 8, 19); // One month later
+      // Calculate totals for verification
+      final totalIncome = sampleTransactions
+          .where((t) => t.type == TransactionType.income)
+          .fold(0.0, (sum, t) => sum + t.amount);
+      final totalExpenses = sampleTransactions
+          .where((t) => t.type == TransactionType.expense)
+          .fold(0.0, (sum, t) => sum + t.amount);
       
-      final budget = Budget(
-        id: 'budget_food_${DateTime.now().millisecondsSinceEpoch}',
-        name: 'comida',
-        amount: 1100000.0,
-        categoryId: 'food',
-        period: BudgetPeriod.monthly,
-        startDate: budgetStartDate,
-        endDate: budgetEndDate,
-        isActive: true,
-        createdAt: DateTime.now(),
-      );
+      print('💰 Total Income: ${totalIncome.toStringAsFixed(0)} COP');
+      print('💸 Total Expenses: ${totalExpenses.toStringAsFixed(0)} COP');
+      print('💵 Balance: ${(totalIncome - totalExpenses).toStringAsFixed(0)} COP');
       
-      // Save budget using BudgetService
-      await BudgetService.updateBudget(budget);
-      print('✅ Created budget: ${budget.name} (${budget.amount} COP)');
-      print('   Start: ${budget.startDate}');
-      print('   End: ${budget.endDate}');
+      // Create sample budgets for current month
+      final budgets = [
+        Budget(
+          id: 'budget_food_${now.millisecondsSinceEpoch}',
+          name: 'Food Budget',
+          amount: 300000.0,
+          categoryId: 'food',
+          period: BudgetPeriod.monthly,
+          startDate: currentMonth,
+          endDate: DateTime(now.year, now.month + 1, 1).subtract(const Duration(days: 1)),
+          isActive: true,
+          createdAt: now,
+        ),
+        Budget(
+          id: 'budget_transport_${now.millisecondsSinceEpoch + 1}',
+          name: 'Transportation Budget',
+          amount: 250000.0,
+          categoryId: 'transportation',
+          period: BudgetPeriod.monthly,
+          startDate: currentMonth,
+          endDate: DateTime(now.year, now.month + 1, 1).subtract(const Duration(days: 1)),
+          isActive: true,
+          createdAt: now,
+        ),
+        Budget(
+          id: 'budget_entertainment_${now.millisecondsSinceEpoch + 2}',
+          name: 'Entertainment Budget',
+          amount: 150000.0,
+          categoryId: 'entertainment',
+          period: BudgetPeriod.monthly,
+          startDate: currentMonth,
+          endDate: DateTime(now.year, now.month + 1, 1).subtract(const Duration(days: 1)),
+          isActive: true,
+          createdAt: now,
+        ),
+      ];
+      
+      // Save budgets
+      for (final budget in budgets) {
+        await BudgetService.updateBudget(budget);
+        print('✅ Created budget: ${budget.name} (${budget.amount.toStringAsFixed(0)} COP)');
+      }
       
       print('\n🎉 Test data recreated successfully!');
-      print('📊 The budget should now show 220,000 COP spent (120k + 100k)');
-      print('🔄 Please refresh the budget screen to see the changes');
+      print('📊 Analytics should now show current month data');
+      print('🔄 Please refresh the Analytics screen to see the changes');
       
     } catch (e) {
       print('❌ Error recreating test data: $e');

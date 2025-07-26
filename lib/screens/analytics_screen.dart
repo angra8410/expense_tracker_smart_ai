@@ -789,6 +789,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         startDate = DateTime(now.year, now.month, 1);
     }
 
-    return _transactions.where((t) => t.date.isAfter(startDate)).toList();
+    return _transactions.where((t) => t.date.isAfter(startDate) || t.date.isAtSameMomentAs(startDate)).toList();
   }
 }
