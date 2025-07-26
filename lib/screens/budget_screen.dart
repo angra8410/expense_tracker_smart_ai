@@ -9,6 +9,8 @@ import '../services/settings_service.dart';
 import '../services/web_storage_service.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/category_localization.dart';
+import '../utils/data_debug_helper.dart';
+import '../utils/hero_tag_manager.dart';
 
 class BudgetScreen extends StatefulWidget {
   final String currency;
@@ -140,6 +142,7 @@ class _BudgetScreenState extends State<BudgetScreen> with WidgetsBindingObserver
               ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: HeroTagManager.CommonTags.budgetFab,
         onPressed: () => _showCreateBudgetDialog(),
         icon: const Icon(Icons.add),
         label: Text(l10n.createBudget),

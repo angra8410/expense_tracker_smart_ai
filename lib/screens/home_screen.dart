@@ -9,6 +9,8 @@ import '../screens/recurring_transactions_screen.dart';
 import '../screens/import_screen.dart';
 import '../screens/advanced_search_screen.dart';
 import '../screens/currency_converter_screen.dart';
+import '../utils/category_localization.dart';
+import '../utils/hero_tag_manager.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int)? onNavigateToTab;
@@ -565,6 +567,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: HeroTagManager.CommonTags.homeSearchFab,
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(

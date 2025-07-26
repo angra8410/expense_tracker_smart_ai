@@ -3,6 +3,7 @@ import '../models/recurring_transaction.dart';
 import '../models/category.dart';
 import '../services/web_storage_service.dart';
 import '../services/recurring_transactions_service.dart';
+import '../utils/hero_tag_manager.dart';
 import '../widgets/recurring_transaction_dialog.dart';
 
 class RecurringTransactionsScreen extends StatefulWidget {
@@ -532,6 +533,7 @@ class _RecurringTransactionsScreenState extends State<RecurringTransactionsScree
               ),
             ),
       floatingActionButton: FloatingActionButton(
+        heroTag: HeroTagManager.CommonTags.recurringFab,
         onPressed: () => _showRecurringTransactionDialog(),
         tooltip: 'Add Recurring Transaction',
         child: const Icon(Icons.add),

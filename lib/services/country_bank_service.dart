@@ -129,6 +129,18 @@ class CountryBankService {
         'amountFormat': '\$#,###,###.##',
         'currency': 'COP',
       },
+      {
+        'name': 'Nu Bank Colombia',
+        'description': 'Nu Bank Colombia statement format - CSV format: fecha, descripción, monto',
+        'csvFieldMapping': {
+          'description': 'descripción',
+          'amount': 'monto',
+          'date': 'fecha',
+        },
+        'dateFormat': 'dd mmm',
+        'amountFormat': '\$#,###,###.##',
+        'currency': 'COP',
+      },
     ],
     'US': [
       {

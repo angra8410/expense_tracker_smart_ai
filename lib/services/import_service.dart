@@ -12,40 +12,46 @@ import '../services/bank_service.dart';
 class ImportService {
   static const _uuid = Uuid();
 
-  static Future<List<Transaction>> importFromCsv(String csvContent, String bankId) async {
+  static Future<List<Transaction>> importFromCsv(String csvContent, Bank bank) async {
     try {
+      print('🔄 Starting CSV import for bank: ${bank.name}');
+      
+      // Clean the CSV content to handle potential encoding issues
+      csvContent = csvContent.trim();
+      // Remove BOM if present
+      if (csvContent.startsWith('\uFEFF')) {
+        csvContent = csvContent.substring(1);
+        print('🔧 Removed BOM from CSV content');
+      }
+      
       final lines = const LineSplitter().convert(csvContent);
+      print('📄 CSV has ${lines.length} lines');
+      
       if (lines.isEmpty) {
         throw Exception('CSV file is empty');
       }
 
-      // Get bank configuration
-      final banks = await BankService.getBanks();
-      final bank = banks.firstWhere(
-        (b) => b.id == bankId,
-        orElse: () => throw Exception('Bank configuration not found'),
-      );
+      print('🏦 Found bank: ${bank.name}');
 
-      // Parse CSV headers
-      List<String> header = _parseCsvLine(lines.first);
-      int startLine = 1; // Skip header line
+      // Parse CSV headers and clean them
+      List<String> header = _parseCsvLine(lines.first).map((field) => field.trim()).toList();
+      print('📋 Original headers: $header');
       
-      // Special handling for Nu Bank Colombia - normalize headers to lowercase
-      if (bank.name == 'Nu Bank Colombia') {
-        // Convert headers to lowercase for case-insensitive matching
-        header = header.map((h) => h.toLowerCase()).toList();
-      }
-      
-      // Validate headers
+      // Validate headers before any normalization
+      print('🔍 Validating headers against mapping: ${bank.csvFieldMapping}');
       _validateCsvHeader(header, bank.csvFieldMapping);
+      
+      int startLine = 1; // Skip header line
 
       // Get categories for mapping
       final categories = await CategoryService.getCategories();
       final categoryNameToId = _createCategoryNameToIdMap(categories);
+      print('📂 Found ${categories.length} categories');
 
       final transactions = <Transaction>[];
 
       // Process data lines
+      print('🔄 Processing ${lines.length - startLine} data lines...');
       for (var i = startLine; i < lines.length; i++) {
         final line = lines[i].trim();
         if (line.isEmpty) continue;
@@ -65,6 +71,7 @@ class ImportService {
           );
 
           transactions.add(transaction);
+          print('✅ Processed transaction ${transactions.length}: ${transaction.description} - ${transaction.amount}');
         } catch (e) {
           print('Warning: Failed to parse line ${i + 1}: $e');
           continue; // Skip problematic lines
@@ -75,6 +82,7 @@ class ImportService {
         throw Exception('No valid transactions found in CSV file');
       }
 
+      print('🎉 Successfully imported ${transactions.length} transactions');
       return transactions;
     } catch (e) {
       throw Exception('Failed to import CSV: $e');
@@ -82,37 +90,69 @@ class ImportService {
   }
 
   static List<String> _parseCsvLine(String line) {
-    final values = <String>[];
+    List<String> result = [];
     bool inQuotes = false;
-    StringBuffer currentValue = StringBuffer();
-
+    String currentField = '';
+    
     for (int i = 0; i < line.length; i++) {
-      final char = line[i];
-
+      String char = line[i];
+      
       if (char == '"') {
-        if (i + 1 < line.length && line[i + 1] == '"') {
-          // Handle escaped quotes
-          currentValue.write('"');
-          i++; // Skip next quote
-        } else {
-          inQuotes = !inQuotes;
-        }
+        inQuotes = !inQuotes;
       } else if (char == ',' && !inQuotes) {
-        values.add(currentValue.toString().trim());
-        currentValue.clear();
+        result.add(currentField.trim());
+        currentField = '';
       } else {
-        currentValue.write(char);
+        currentField += char;
       }
     }
-
-    values.add(currentValue.toString().trim());
-    return values;
+    
+    // Add the last field
+    result.add(currentField.trim());
+    
+    // Special handling for Nu Bank Colombia amount format
+    // Check if we have exactly 4 parts and the last two might be amount components
+    if (result.length == 4) {
+      String thirdPart = result[2].trim();
+      String fourthPart = result[3].trim();
+      
+      // Check if third part looks like Colombian amount format and fourth part is decimal
+      if (RegExp(r'^[+\-]?\$[\d.]+$').hasMatch(thirdPart) && 
+          RegExp(r'^\d{2}$').hasMatch(fourthPart)) {
+        // Merge the amount parts
+        result[2] = '$thirdPart,$fourthPart';
+        result.removeAt(3);
+        print('🔧 Nu Bank Colombia: Merged amount ${result[2]}');
+      }
+    }
+    
+    return result;
   }
 
   static void _validateCsvHeader(List<String> header, Map<String, String> fieldMapping) {
-    final requiredFields = fieldMapping.values.toSet();
     final headerFields = header.map((field) => field.toLowerCase()).toSet();
-    final missingFields = requiredFields.difference(headerFields);
+    final requiredMappedFields = fieldMapping.values.map((field) => field.toLowerCase()).toSet();
+    
+    print('🔍 Raw header: $header');
+    print('🔍 Header fields (lowercase): $headerFields');
+    print('🔍 Required mapped fields (lowercase): $requiredMappedFields');
+    
+    // Debug: Print each header field with its character codes
+    for (int i = 0; i < header.length; i++) {
+      final field = header[i];
+      final codes = field.codeUnits;
+      print('🔍 Header[$i]: "$field" (length: ${field.length}, codes: $codes)');
+    }
+    
+    // Check if all required mapped fields are present in the CSV headers
+    final missingFields = <String>[];
+    for (String requiredField in requiredMappedFields) {
+      if (!headerFields.contains(requiredField)) {
+        missingFields.add(requiredField);
+      }
+    }
+
+    print('🔍 Missing fields: $missingFields');
 
     if (missingFields.isNotEmpty) {
       throw Exception(
@@ -135,8 +175,14 @@ class ImportService {
     final fieldMap = Map.fromIterables(header, values);
     final mapping = bank.csvFieldMapping;
 
+    print('🔍 Debug - Header: $header');
+    print('🔍 Debug - Values: $values');
+    print('🔍 Debug - Field map: $fieldMap');
+    print('🔍 Debug - Bank mapping: $mapping');
+
     // Parse amount with special handling for Nu Bank Colombia format
     String amountStr = fieldMap[mapping['amount']]!;
+    print('🔍 Debug - Amount string: $amountStr');
     double amount;
     TransactionType type;
 

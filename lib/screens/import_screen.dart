@@ -72,13 +72,16 @@ class _ImportScreenState extends State<ImportScreen> {
   }
 
   Future<void> _handleFileUpload() async {
+    print('📤 File upload initiated');
     if (_selectedBank == null) {
+      print('❌ No bank selected');
       setState(() {
         _error = 'Please select a bank first';
       });
       return;
     }
 
+    print('🏦 Selected bank: ${_selectedBank!.name}');
     final uploadInput = html.FileUploadInputElement();
     uploadInput.accept = '.csv';
     uploadInput.click();
@@ -86,6 +89,7 @@ class _ImportScreenState extends State<ImportScreen> {
     await uploadInput.onChange.first;
     final file = uploadInput.files?.first;
     if (file != null) {
+      print('📁 File selected: ${file.name} (${file.size} bytes)');
       setState(() {
         _isLoading = true;
         _error = null;
@@ -98,21 +102,27 @@ class _ImportScreenState extends State<ImportScreen> {
 
         await reader.onLoad.first;
         final csvContent = reader.result as String;
+        print('📄 CSV content loaded (${csvContent.length} characters)');
+        
         final transactions = await ImportService.importFromCsv(
           csvContent,
-          _selectedBank!.id,
+          _selectedBank!,
         );
 
+        print('✅ Import completed: ${transactions.length} transactions');
         setState(() {
           _previewTransactions = transactions;
           _isLoading = false;
         });
       } catch (e) {
+        print('❌ Import failed: $e');
         setState(() {
           _error = e.toString();
           _isLoading = false;
         });
       }
+    } else {
+      print('❌ No file selected');
     }
   }
 
@@ -160,9 +170,10 @@ class _ImportScreenState extends State<ImportScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -372,6 +383,7 @@ class _ImportScreenState extends State<ImportScreen> {
               ),
             ],
           ],
+          ),
         ),
       ),
     );
