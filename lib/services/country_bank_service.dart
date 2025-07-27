@@ -141,6 +141,30 @@ class CountryBankService {
         'amountFormat': '\$#,###,###.##',
         'currency': 'COP',
       },
+      {
+        'name': 'Bancolombia (6 fields format)',
+        'description': 'Bancolombia statement format - CSV format: FECHA, DESCRIPCIÓN, SUCURSAL, DCTO, VALOR, SALDO',
+        'csvFieldMapping': {
+          'description': 'DESCRIPCIÓN',
+          'amount': 'VALOR',
+          'date': 'FECHA',
+        },
+        'dateFormat': 'dd/MM',
+        'amountFormat': '#,###.##',
+        'currency': 'COP',
+      },
+      {
+        'name': 'Banco de Occidente',
+        'description': 'Banco de Occidente statement format - CSV format: DESCRIPCIÓN, FECHA DIA/MES, VALOR COMPRA',
+        'csvFieldMapping': {
+          'description': 'descripción',
+          'amount': 'valor compra',
+          'date': 'fecha dia/mes',
+        },
+        'dateFormat': 'dd/MM',
+        'amountFormat': '#,###.##',
+        'currency': 'COP',
+      },
     ],
     'US': [
       {

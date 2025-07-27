@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/web_storage_service.dart';
 import '../services/enhanced_ml_service.dart';
 import '../services/budget_notification_service.dart';
+import '../services/settings_service.dart';
 import '../models/transaction.dart';
 import '../models/category.dart';
 import '../models/ml_models.dart';
@@ -22,6 +24,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   List<PersonalizedAdvice> _advice = [];
   bool _isLoading = true;
   String _selectedPeriod = 'month';
+  String _currency = 'COP'; // Default to Colombian Peso
 
   @override
   void initState() {
@@ -55,6 +58,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     });
 
     try {
+      // Load currency setting
+      final prefs = await SharedPreferences.getInstance();
+      final currency = prefs.getString('currency') ?? 'COP';
+      
       // Add debug information and use the same parameters as budget screen
       print('📊 Analytics: Loading transactions...');
       final transactions = await WebStorageService.getTransactions(includeTestData: false);
@@ -72,6 +79,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         _categories = categories;
         _anomalies = anomalies;
         _advice = advice;
+        _currency = currency;
         _isLoading = false;
       });
       
@@ -214,7 +222,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              '\$${amount.toStringAsFixed(2)}',
+              SettingsService.formatCurrency(amount, _currency),
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: color,
                 fontWeight: FontWeight.bold,

@@ -1,4 +1,3 @@
-import 'dart:developer' as developer;
 
 class PerformanceMonitor {
   static final Map<String, DateTime> _startTimes = {};

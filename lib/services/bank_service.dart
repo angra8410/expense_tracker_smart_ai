@@ -128,6 +128,21 @@ class BankService {
         amountFormat: '+/-\$#.###.###,##',
         defaultAccountId: 'nu-colombia',
       ));
+
+      // Banco de Occidente format
+      await addBank(Bank(
+        id: _uuid.v4(),
+        name: 'Banco de Occidente',
+        description: 'Banco de Occidente statement format with columns: DESCRIPCIÓN, FECHA DIA/MES, VALOR COMPRA (Colombian peso format)',
+        csvFieldMapping: {
+          'description': 'descripción',
+          'amount': 'valor compra',
+          'date': 'fecha dia/mes',
+        },
+        dateFormat: 'dd/MM',
+        amountFormat: '#.###.###,##',
+        defaultAccountId: 'banco-occidente',
+      ));
     }
   }
 }

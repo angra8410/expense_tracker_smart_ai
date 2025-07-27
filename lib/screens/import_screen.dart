@@ -98,11 +98,24 @@ class _ImportScreenState extends State<ImportScreen> {
 
       try {
         final reader = html.FileReader();
-        reader.readAsText(file);
-
+        
+        // Try reading as text first
+        reader.readAsText(file, 'utf-8');
         await reader.onLoad.first;
-        final csvContent = reader.result as String;
+        
+        String csvContent = reader.result as String;
         print('📄 CSV content loaded (${csvContent.length} characters)');
+        print('🔍 First 100 characters: ${csvContent.length > 100 ? csvContent.substring(0, 100) : csvContent}');
+        
+        // If the content looks like it might be encoded differently, try other encodings
+        if (csvContent.contains('�') || csvContent.trim().isEmpty) {
+          print('🔧 Detected encoding issues, trying latin1...');
+          final reader2 = html.FileReader();
+          reader2.readAsText(file, 'latin1');
+          await reader2.onLoad.first;
+          csvContent = reader2.result as String;
+          print('📄 CSV content reloaded with latin1 (${csvContent.length} characters)');
+        }
         
         final transactions = await ImportService.importFromCsv(
           csvContent,

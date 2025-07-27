@@ -45,10 +45,20 @@ class SettingsService {
   static String formatCurrency(double amount, String currencyCode) {
     switch (currencyCode) {
       case 'COP':
-        return '\$${amount.toStringAsFixed(0).replaceAllMapped(
+        // Format with 2 decimal places and Colombian thousands separators
+        String formattedAmount = amount.toStringAsFixed(2);
+        // Split into integer and decimal parts
+        List<String> parts = formattedAmount.split('.');
+        String integerPart = parts[0];
+        String decimalPart = parts[1];
+        
+        // Add thousands separators (dots) to integer part
+        integerPart = integerPart.replaceAllMapped(
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]}.',
-        )} COP';
+        );
+        
+        return '\$${integerPart},${decimalPart} COP';
       case 'USD':
         return '\$${amount.toStringAsFixed(2)} USD';
       default:
