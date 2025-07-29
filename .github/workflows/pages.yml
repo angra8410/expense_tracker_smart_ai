@@ -31,9 +31,8 @@ jobs:
         with:
           flutter-version: '3.13.0'
           channel: 'stable'
-
-      - name: Add Flutter to PATH
-        run: echo "$HOME/.flutter/bin" >> $GITHUB_PATH
+          cache: false
+          architecture: x64
 
       - name: Check Flutter & Dart version
         run: flutter --version
