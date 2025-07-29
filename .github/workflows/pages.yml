@@ -24,11 +24,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Remove old Flutter SDK (optional safety)
+        run: rm -rf "$HOME/.flutter"
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.13.0'
           channel: 'stable'
-      
+
+      - name: Add Flutter to PATH
+        run: echo "$HOME/.flutter/bin" >> $GITHUB_PATH
+
       - name: Check Flutter & Dart version
         run: flutter --version
 
