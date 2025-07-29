@@ -29,15 +29,18 @@ jobs:
           flutter-version: '3.13.0'
           channel: 'stable'
       
+      - name: Check Flutter & Dart version
+        run: flutter --version
+
       - name: Get dependencies
         run: flutter pub get
 
       - name: Clean build
         run: flutter clean
-      
+
       - name: Build web
         run: flutter build web --base-href /expense_tracker_smart_ai/
-      
+
       - name: Setup Pages
         uses: actions/configure-pages@v3
 
